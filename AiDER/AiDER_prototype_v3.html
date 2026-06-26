@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="theme-color" content="#2671EA">
+<title>AiDER — AI 피부 질환 스크리닝</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --p:#2671EA;--pd:#1A5BC7;--ps:rgba(38,113,234,.12);
+  --c:#fff;--sf:#F5F7FA;--hl:#D1D5DB;--hls:#E9EAEC;
+  --id:#0D1117;--ink:#1F2937;--ch:#374151;
+  --sl:#6B7280;--st:#9CA3AF;
+  --ib:#000;--ok:#10B981;--att:#F59E0B;
+  --crit:#EF4444;--crits:#DC2626;
+}
+body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif;background:#DDDFE3;min-height:100vh;display:flex;align-items:center;justify-content:center;word-break:keep-all;}
+#page{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+#device{width:402px;height:874px;overflow:hidden;position:relative;background:#fff;border-radius:52px;box-shadow:0 40px 100px rgba(0,0,0,.32),0 0 0 1.5px rgba(0,0,0,.18),inset 0 0 0 1px rgba(255,255,255,.6);}
+#di{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:126px;height:36px;background:#000;border-radius:20px;z-index:500;pointer-events:none;}
+
+/* SCREENS */
+.scr{position:absolute;inset:0;display:flex;flex-direction:column;background:#fff;overflow:hidden;transform:translateX(100%);will-change:transform;}
+#splash{transform:translateX(0);z-index:10;}
+.scr.on{transform:translateX(0);z-index:10;}
+
+/* SAFE AREAS */
+.s-top{height:59px;flex-shrink:0;}
+.s-bot{height:34px;flex-shrink:0;}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.px16{padding-left:16px;padding-right:16px;}
+.pb24{padding-bottom:24px;}
+
+/* APP BAR */
+.abar{height:48px;display:flex;align-items:center;padding:0 8px;background:#fff;border-bottom:1px solid var(--hls);flex-shrink:0;gap:4px;}
+.abar-title{flex:1;text-align:center;font-size:16px;font-weight:600;color:var(--id);line-height:1.375;}
+.ibtn{width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--sf);border-radius:50%;border:none;cursor:pointer;color:var(--ink);flex-shrink:0;transition:background .12s,transform .1s;}
+.ibtn:active{background:var(--hls);transform:scale(.94);}
+.ibtn svg{width:20px;height:20px;}
+
+/* TAB BAR */
+.tabs{height:56px;display:flex;background:#fff;border-top:1px solid var(--hls);box-shadow:0 -1px 4px rgba(0,0,0,.08);flex-shrink:0;}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:none;background:none;color:var(--st);padding:0;font-family:inherit;transition:color .15s;}
+.tab.on{color:var(--p);}
+.ti svg{width:22px;height:22px;display:block;}
+.tab span:last-child{font-size:10px;font-weight:700;}
+.tab-badge{position:absolute;top:6px;right:8px;width:16px;height:16px;border-radius:50%;background:var(--crit);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;border:none;cursor:pointer;font-family:inherit;font-size:15px;font-weight:700;line-height:1.4;letter-spacing:-.02em;border-radius:9999px;transition:opacity .12s,transform .1s;user-select:none;}
+.btn:active{opacity:.82;transform:scale(.97);}
+.btn-p{background:var(--p);color:#fff;padding:14px 24px;width:100%;}
+.btn-s{background:var(--ib);color:#fff;padding:14px 24px;width:100%;}
+.btn-g{background:transparent;color:var(--id);border:1.5px solid var(--hl);padding:12px 22px;width:100%;}
+.btn-chip{background:var(--sf);color:var(--sl);padding:7px 14px;font-size:13px;border:none;border-radius:9999px;cursor:pointer;font-family:inherit;font-weight:700;white-space:nowrap;transition:background .12s,color .12s;}
+.btn-chip.on{background:var(--p);color:#fff;}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;line-height:1.45;border-radius:9999px;padding:4px 10px;}
+.bdg-p{background:var(--ps);color:var(--p);}
+.bdg-ok{background:rgba(16,185,129,.12);color:var(--ok);}
+.bdg-att{background:rgba(245,158,11,.12);color:var(--att);}
+.bdg-crit{background:rgba(239,68,68,.12);color:var(--crit);}
+.bdg-n{background:var(--sf);color:var(--sl);}
+
+/* STEP BAR */
+.stepbar{display:flex;align-items:center;padding:12px 16px 8px;gap:6px;flex-shrink:0;}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--hls);transition:.25s;}
+.sdot.on{background:var(--p);width:24px;border-radius:4px;}
+.sdot.done{background:rgba(38,113,234,.35);}
+.step-lbl{margin-left:auto;font-size:12px;color:var(--sl);}
+
+/* CARDS */
+.card{background:#fff;border-radius:16px;border:1px solid var(--hls);padding:20px;}
+.card-soft{background:var(--sf);border-radius:24px;padding:20px;}
+.sh{font-size:13px;font-weight:700;color:var(--sl);padding:18px 0 10px;}
+
+/* FORM */
+.fg{margin-bottom:16px;}
+.fl{display:block;font-size:13px;font-weight:700;color:var(--id);margin-bottom:8px;}
+.fh{font-size:12px;color:var(--sl);margin-top:4px;}
+.input{width:100%;height:48px;border:1.5px solid var(--hl);border-radius:10px;padding:0 16px;font-family:inherit;font-size:14px;color:var(--ink);outline:none;background:#fff;transition:border-color .15s;}
+.input:focus{border-color:var(--p);}
+.sl-row{display:flex;align-items:center;gap:10px;}
+.sl-input{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--hls);outline:none;cursor:pointer;}
+.sl-input::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--p);cursor:pointer;box-shadow:0 2px 8px rgba(38,113,234,.4);}
+.sl-val{width:22px;text-align:center;font-size:13px;font-weight:700;color:var(--p);}
+.tgl-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--hls);}
+.tgl-row:last-child{border-bottom:none;}
+.tgl-lbl{font-size:14px;color:var(--ink);}
+.tgl-sub{font-size:12px;color:var(--sl);margin-top:2px;}
+.tgl-sw{position:relative;width:44px;height:26px;flex-shrink:0;}
+.tgl-sw input{opacity:0;width:0;height:0;}
+.tgl-track{position:absolute;inset:0;border-radius:13px;background:var(--hls);cursor:pointer;transition:.2s;}
+.tgl-sw input:checked+.tgl-track{background:var(--p);}
+.tgl-track::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;}
+.tgl-sw input:checked+.tgl-track::after{transform:translateX(18px);}
+.sel-wrap{position:relative;}
+.sel-wrap::after{content:'▾';position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--sl);pointer-events:none;font-size:12px;}
+.sel{width:100%;height:48px;background:#fff;border:1px solid var(--hl);border-radius:8px;padding:0 16px;font-family:inherit;font-size:14px;color:var(--ink);outline:none;-webkit-appearance:none;cursor:pointer;}
+
+/* BODY MAP */
+.bmap{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.bpart{background:var(--sf);border:2px solid transparent;border-radius:12px;padding:13px;text-align:center;cursor:pointer;font-size:13px;font-weight:600;color:var(--sl);transition:.15s;font-family:inherit;}
+.bpart.on{background:var(--ps);border-color:var(--p);color:var(--p);}
+
+/* PROB BARS — animated */
+.pb-item{margin-bottom:10px;}
+.pb-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.pb-name{font-size:13px;color:var(--ink);flex:1;}
+.pb-pct{font-size:13px;font-weight:700;width:36px;text-align:right;transition:color .3s;}
+.pb-track{height:6px;background:var(--hls);border-radius:3px;overflow:hidden;}
+.pb-fill{height:100%;border-radius:3px;width:0;transition:width 1.2s cubic-bezier(0.4,0,0.2,1);}
+.pb-hi{background:var(--p);}
+.pb-md{background:var(--att);}
+.pb-lo{background:var(--st);}
+
+/* DIAG IMAGE */
+.diag-img{width:100%;aspect-ratio:1.15;background:linear-gradient(135deg,#f5e4d4 0%,#e8c9aa 50%,#d4aa80 100%);border-radius:32px;position:relative;overflow:hidden;margin-bottom:16px;}
+.diag-bb{position:absolute;border:2.5px solid var(--p);border-radius:6px;background:rgba(38,113,234,.08);opacity:0;transition:opacity .4s,transform .4s;}
+.diag-bb.show{opacity:1;transform:scale(1) !important;}
+.diag-bb-lbl{position:absolute;top:-22px;left:0;background:var(--p);color:#fff;font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;white-space:nowrap;}
+
+/* LOADING */
+.lstep{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--hls);}
+.lstep:last-child{border-bottom:none;}
+.lstep-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--sf);font-size:16px;}
+.lstep-icon.done{background:rgba(16,185,129,.12);}
+.lstep-icon.act{background:var(--ps);}
+.lstep-info{flex:1;}
+.lstep-name{font-size:14px;font-weight:700;color:var(--id);}
+.lstep-desc{font-size:12px;color:var(--sl);margin-top:2px;}
+.lstep-st{font-size:12px;font-weight:700;}
+.lstep-st.done{color:var(--ok);}
+.lstep-st.act{color:var(--p);}
+.lstep-st.wait{color:var(--st);}
+/* Timeline timestamps */
+.lstep-time{font-size:11px;color:var(--st);margin-top:3px;display:none;}
+.lstep-time.show{display:block;}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:36px;height:36px;border:3px solid var(--ps);border-top-color:var(--p);border-radius:50%;animation:spin .7s linear infinite;}
+.progress{height:4px;background:var(--hls);border-radius:2px;overflow:hidden;margin:8px 0;}
+.progress-fill{height:100%;background:var(--p);border-radius:2px;transition:width .4s ease;}
+
+/* HERO */
+.hero{border-radius:32px;background:var(--id);padding:24px;margin-bottom:12px;position:relative;overflow:hidden;cursor:pointer;}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 75% 25%,rgba(38,113,234,.4) 0%,transparent 65%);}
+.hero-inner{position:relative;z-index:1;}
+
+/* HISTORY */
+.hi-item{display:flex;align-items:center;gap:14px;padding:14px 16px;background:#fff;border-radius:16px;border:1px solid var(--hls);margin-bottom:10px;cursor:pointer;transition:background .12s;}
+.hi-item:active{background:var(--sf);}
+.hi-thumb{width:44px;height:44px;border-radius:50%;background:var(--sf);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.hi-info{flex:1;min-width:0;}
+.hi-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
+.hi-name{font-size:14px;font-weight:700;color:var(--id);}
+.hi-date{font-size:12px;color:var(--st);}
+
+/* PROFILE */
+.pr-row{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--hls);cursor:pointer;transition:background .12s;}
+.pr-row:last-child{border-bottom:none;}
+.pr-row:active{background:var(--sf);}
+.pr-icon{width:36px;height:36px;border-radius:10px;background:var(--sf);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.pr-label{flex:1;font-size:15px;color:var(--id);}
+.pr-meta{font-size:12px;color:var(--st);}
+.pr-chev{color:var(--st);font-size:18px;display:flex;align-items:center;flex-shrink:0;}
+.pr-chev svg{width:18px;height:18px;}
+
+/* UPLOAD */
+.upzone{width:100%;border:2px dashed var(--hl);border-radius:32px;background:var(--sf);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;padding:40px 20px;margin-bottom:20px;transition:.15s;}
+.upzone:active{border-color:var(--p);background:var(--ps);}
+
+/* DANGER BANNER */
+.danger-banner{background:rgba(239,68,68,.07);border:1.5px solid var(--crit);border-radius:16px;padding:16px;display:flex;gap:12px;margin-bottom:16px;align-items:flex-start;}
+
+/* OTC */
+.otc-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--hls);}
+.otc-item:last-child{border-bottom:none;}
+.otc-rank{width:28px;height:28px;border-radius:50%;background:var(--ps);color:var(--p);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.otc-nm{font-size:14px;font-weight:600;color:var(--id);}
+.otc-sub{font-size:11px;color:var(--sl);margin-top:1px;}
+.otc-score{font-size:13px;font-weight:700;color:var(--p);}
+
+/* HOSP */
+.hosp-row{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;margin-bottom:16px;}
+.hosp-no{background:rgba(16,185,129,.08);}
+.hosp-yes{background:rgba(239,68,68,.08);}
+
+/* FOOTER */
+.footer{padding:12px 16px 8px;display:flex;flex-direction:column;gap:10px;background:#fff;border-top:1px solid var(--hls);flex-shrink:0;}
+.footer-row{display:flex;gap:10px;}
+
+/* QUALITY */
+.qres{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;gap:16px;}
+.qicon{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;}
+.qicon-ok{background:rgba(16,185,129,.12);}
+.qicon-fail{background:rgba(239,68,68,.12);}
+
+/* GENDER */
+.gender-row{display:flex;gap:8px;}
+.gender-btn{flex:1;padding:13px;background:var(--sf);border:2px solid transparent;border-radius:12px;cursor:pointer;font-size:14px;font-weight:600;color:var(--sl);text-align:center;font-family:inherit;transition:.15s;}
+.gender-btn.on{background:var(--ps);border-color:var(--p);color:var(--p);}
+
+/* ONBOARD */
+.ob-dots{display:flex;gap:6px;justify-content:center;margin-bottom:16px;}
+.ob-dot{width:8px;height:8px;border-radius:50%;background:var(--hls);transition:.25s;}
+.ob-dot.on{background:var(--p);width:24px;border-radius:4px;}
+
+/* STAT */
+.stat-row{display:flex;gap:10px;}
+.stat-card{flex:1;background:#fff;border-radius:16px;border:1px solid var(--hls);padding:16px;text-align:center;}
+.stat-val{font-size:22px;font-weight:700;color:var(--p);}
+.stat-lbl{font-size:12px;color:var(--sl);margin-top:4px;}
+
+/* ── CAMERA ── */
+#camera{background:#0a0a0a;}
+.cam-safe{height:59px;background:#0a0a0a;flex-shrink:0;}
+.cam-bar{height:48px;display:flex;align-items:center;padding:0 12px;background:#0a0a0a;flex-shrink:0;}
+.cam-ibtn{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:none;cursor:pointer;background:rgba(255,255,255,.15);color:#fff;}
+.cam-ibtn:active{background:rgba(255,255,255,.3);}
+.cam-ibtn svg{width:22px;height:22px;}
+.cam-viewfinder{flex:1;display:flex;align-items:center;justify-content:center;position:relative;}
+.cam-guide{width:290px;height:290px;position:relative;}
+.cam-corner{position:absolute;width:28px;height:28px;border-color:#fff;border-style:solid;border-radius:4px;}
+.cam-corner.tl{top:0;left:0;border-width:3px 0 0 3px;}
+.cam-corner.tr{top:0;right:0;border-width:3px 3px 0 0;}
+.cam-corner.bl{bottom:0;left:0;border-width:0 0 3px 3px;}
+.cam-corner.br{bottom:0;right:0;border-width:0 3px 3px 0;}
+.cam-line-h{position:absolute;top:50%;left:8%;right:8%;height:1px;background:rgba(255,255,255,.2);}
+.cam-line-v{position:absolute;left:50%;top:8%;bottom:8%;width:1px;background:rgba(255,255,255,.2);}
+@keyframes camScan{0%,100%{opacity:.3;transform:translateY(-140px)}50%{opacity:.8;transform:translateY(140px)}}
+.cam-scan{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#2671EA,transparent);animation:camScan 2.5s ease-in-out infinite;}
+.cam-instruction{color:rgba(255,255,255,.85);font-size:13px;font-weight:500;text-align:center;margin-top:20px;}
+.cam-bottom{height:140px;background:#0a0a0a;display:flex;align-items:center;justify-content:space-between;padding:0 40px;flex-shrink:0;}
+.shutter{width:72px;height:72px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.4);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .1s;}
+.shutter:active{transform:scale(.92);}
+.shutter-inner{width:54px;height:54px;border-radius:50%;background:var(--p);}
+.cam-side-btn{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.18);border:none;cursor:pointer;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;}
+/* Focus ring */
+.focus-ring{position:absolute;width:70px;height:70px;border:2px solid #ffd60a;border-radius:6px;pointer-events:none;display:none;}
+@keyframes focusPulse{0%{opacity:1;transform:scale(1.3)}100%{opacity:1;transform:scale(1)}}
+.focus-ring.active{display:block;animation:focusPulse .3s ease forwards;}
+.cam-safe-bot{height:34px;background:#0a0a0a;flex-shrink:0;}
+
+/* ── YOLO VIZ ── */
+.yolo-img{width:100%;aspect-ratio:1.2;background:linear-gradient(135deg,#f5e4d4 0%,#e8c9aa 50%,#d4aa80 100%);border-radius:32px;position:relative;overflow:hidden;margin-bottom:16px;}
+.yolo-bb{position:absolute;border:2.5px solid var(--p);border-radius:6px;background:rgba(38,113,234,.08);opacity:0;}
+.yolo-bb.visible{animation:bbAppear .4s ease forwards;}
+@keyframes bbAppear{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+.yolo-bb-lbl{position:absolute;top:-22px;left:0;background:var(--p);color:#fff;font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;white-space:nowrap;}
+@keyframes yoloScan{from{top:0;opacity:1}to{top:100%;opacity:0}}
+.scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--p),transparent);animation:yoloScan .8s ease-out 1 forwards;}
+
+/* ── RESULT TABS ── */
+.rtab-bar{display:flex;padding:0 16px;gap:8px;border-bottom:1px solid var(--hls);flex-shrink:0;}
+.rtab{padding:12px 16px;font-size:13px;font-weight:700;color:var(--sl);border-bottom:2.5px solid transparent;cursor:pointer;transition:.15s;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit;}
+.rtab.on{color:var(--p);border-bottom-color:var(--p);}
+.rtab-content{display:none;flex:1;overflow-y:auto;padding:20px 16px 24px;}
+.rtab-content.on{display:block;}
+
+/* ── HOSPITAL MAP ── */
+.hosp-card{display:flex;align-items:flex-start;gap:14px;padding:16px;background:#fff;border-radius:16px;border:1px solid var(--hls);margin-bottom:10px;cursor:pointer;transition:background .12s;}
+.hosp-card:active{background:var(--sf);}
+.hosp-icon{width:44px;height:44px;border-radius:12px;background:var(--ps);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.hosp-name{font-size:14px;font-weight:700;color:var(--id);margin-bottom:3px;}
+.hosp-info{font-size:12px;color:var(--sl);}
+.hosp-dist{font-size:13px;font-weight:700;color:var(--p);text-align:right;flex-shrink:0;}
+.hosp-open{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:3px 8px;border-radius:9999px;}
+.open-yes{background:rgba(16,185,129,.12);color:var(--ok);}
+.open-no{background:rgba(239,68,68,.1);color:var(--crit);}
+
+/* ── SAVE SHEET ── */
+#save-sheet{position:absolute;inset:0;z-index:300;background:rgba(0,0,0,0);pointer-events:none;transition:background .25s;}
+#save-sheet.open{background:rgba(0,0,0,.4);pointer-events:auto;}
+.save-sheet-inner{position:absolute;bottom:0;left:0;right:0;background:#fff;border-radius:28px 28px 0 0;padding:8px 20px 0;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);}
+#save-sheet.open .save-sheet-inner{transform:translateY(0);}
+.sheet-handle{width:40px;height:4px;border-radius:2px;background:var(--hls);margin:8px auto 20px;}
+.sheet-btn{display:flex;align-items:center;gap:16px;width:100%;padding:16px 0;border:none;background:none;cursor:pointer;font-family:inherit;border-bottom:1px solid var(--hls);}
+.sheet-btn:last-of-type{border-bottom:none;}
+.sheet-btn-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.sheet-btn-lbl{font-size:16px;font-weight:600;color:var(--id);}
+.sheet-close{width:100%;padding:16px;background:var(--sf);border:none;border-radius:9999px;font-family:inherit;font-size:15px;font-weight:700;color:var(--sl);cursor:pointer;margin:12px 0;}
+
+/* ── TOAST ── */
+#toast{position:absolute;bottom:110px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--id);color:#fff;border-radius:9999px;padding:10px 20px;font-size:14px;font-weight:600;white-space:nowrap;z-index:1000;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.25);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── SWIPE HINT ── */
+#swipe-hint{position:absolute;left:0;top:50%;transform:translateY(-50%);width:4px;height:60px;background:var(--p);border-radius:0 4px 4px 0;opacity:0;transition:opacity .2s;z-index:999;pointer-events:none;}
+
+/* ── SETTINGS SCREENS ── */
+.settings-section-title{font-size:13px;font-weight:700;color:var(--sl);padding:20px 0 8px;}
+.settings-row{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--hls);cursor:pointer;transition:background .12s;}
+.settings-row:last-child{border-bottom:none;}
+.settings-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.settings-label{flex:1;}
+.settings-name{font-size:15px;color:var(--id);}
+.settings-desc{font-size:12px;color:var(--sl);margin-top:2px;}
+.settings-value{font-size:13px;color:var(--sl);margin-right:6px;}
+.settings-chev{color:var(--st);display:flex;align-items:center;}
+.settings-chev svg{width:16px;height:16px;}
+
+/* ── PRIVACY POLICY ── */
+.policy-body{font-size:13px;color:var(--ink);line-height:1.8;padding:20px 16px 40px;}
+.policy-h2{font-size:15px;font-weight:700;color:var(--id);margin:20px 0 8px;}
+.policy-h2:first-child{margin-top:0;}
+
+/* ── APP INFO ── */
+.appinfo-center{display:flex;flex-direction:column;align-items:center;padding:28px 24px;text-align:center;}
+.appinfo-ver{display:inline-flex;align-items:center;background:var(--ps);border-radius:9999px;padding:4px 14px;font-size:12px;font-weight:700;color:var(--p);margin-top:8px;}
+.appinfo-divider{height:1px;background:var(--hls);margin:4px 0;}
+
+/* ── SUCCESS OVERLAY ── */
+#success-overlay{position:absolute;inset:0;background:rgba(255,255,255,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;opacity:0;pointer-events:none;transition:opacity .4s;}
+#success-overlay.show{opacity:1;pointer-events:auto;}
+@keyframes popIn{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+.success-icon{width:96px;height:96px;border-radius:50%;background:rgba(16,185,129,.12);display:flex;align-items:center;justify-content:center;font-size:48px;animation:popIn .5s cubic-bezier(0.4,0,0.2,1) both;}
+
+/* ── PULL TO REFRESH ── */
+.ptr-indicator{display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;transition:height .3s;gap:8px;font-size:13px;color:var(--sl);}
+.ptr-indicator.show{height:44px;}
+
+/* ── NOTIFICATION ROW ── */
+.notif-row{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--hls);}
+.notif-row:last-child{border-bottom:none;}
+.notif-label{flex:1;}
+.notif-name{font-size:15px;color:var(--id);font-weight:500;}
+.notif-desc{font-size:12px;color:var(--sl);margin-top:3px;word-break:keep-all;}
+
+/* BIG NUMBER COUNT-UP */
+.big-num{font-size:28px;font-weight:700;color:var(--p);display:inline;}
+.result-confidence{margin-bottom:16px;}
+
+/* LARGE DIVIDER / SECTION */
+.section-divider{height:8px;background:var(--sf);margin:0 -16px;}
+
+@media(max-width:440px){body{align-items:flex-start;}#page{padding:0;}#device{border-radius:0;box-shadow:none;width:100vw;height:100dvh;}.scr{width:100vw;height:100dvh;}}
+
+</style>
+</head>
+<body>
+<div id="page">
+<div id="device">
+<div id="di"></div>
+<div class="scr" id="splash"><div class="s-top"></div><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;padding:24px"><div style="display:flex;align-items:center"><svg style="height:40px;width:auto" viewBox="0 0 969 178" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M136.4 13.9543H174.289L37.8889 173.088H0L136.4 13.9543Z" fill="#000000"/>
+<path d="M60.6222 104.888H143.978V135.199H60.6222V104.888Z" fill="#000000"/>
+<path d="M195.91 13.667C212.708 13.667 227.388 16.9963 239.948 23.655C252.509 30.3137 262.194 39.6963 269.004 51.803C275.966 63.7583 279.446 77.6053 279.446 93.344C279.446 108.931 275.966 122.778 269.004 134.885C262.194 146.992 252.433 156.374 239.721 163.033C227.161 169.692 212.557 173.021 195.91 173.021H136.209V13.667H195.91ZM193.413 139.425C208.093 139.425 219.518 135.415 227.69 127.394C235.862 119.373 239.948 108.023 239.948 93.344C239.948 78.6647 235.862 67.239 227.69 59.067C219.518 50.895 208.093 46.809 193.413 46.809H175.026V139.425H193.413Z" fill="#2671EA"/>
+<path d="M136.4 13.9543H174.289L174.289 173.088H136.4L136.4 13.9543Z" fill="#000000"/>
+<path d="M434.567 149.617H376.665L367.383 177.021H327.824L383.958 21.879H427.716L483.85 177.021H443.849L434.567 149.617ZM424.843 120.445L405.616 63.648L386.61 120.445H424.843Z" fill="#000000"/>
+<path d="M519.94 40.885C513.31 40.885 507.859 38.9697 503.586 35.139C499.461 31.161 497.398 26.299 497.398 20.553C497.398 14.6597 499.461 9.79767 503.586 5.967C507.859 1.989 513.31 0 519.94 0C526.423 0 531.727 1.989 535.852 5.967C540.125 9.79767 542.261 14.6597 542.261 20.553C542.261 26.299 540.125 31.161 535.852 35.139C531.727 38.9697 526.423 40.885 519.94 40.885ZM538.725 53.703V177.021H500.934V53.703H538.725Z" fill="#000000"/>
+<path d="M624.235 21.879C640.589 21.879 654.88 25.1203 667.109 31.603C679.337 38.0857 688.767 47.2203 695.397 59.007C702.174 70.6463 705.563 84.1273 705.563 99.45C705.563 114.625 702.174 128.106 695.397 139.893C688.767 151.68 679.264 160.814 666.888 167.297C654.659 173.78 640.441 177.021 624.235 177.021H566.112V21.879H624.235ZM621.804 144.313C636.095 144.313 647.219 140.409 655.175 132.6C663.131 124.791 667.109 113.741 667.109 99.45C667.109 85.1587 663.131 74.035 655.175 66.079C647.219 58.123 636.095 54.145 621.804 54.145H603.903V144.313H621.804Z" fill="#2671EA"/>
+<path d="M764.473 52.156V83.538H815.082V112.71H764.473V146.744H821.712V177.021H726.682V21.879H821.712V52.156H764.473Z" fill="#2671EA"/>
+<path d="M925.364 177.021L893.098 118.456H884.037V177.021H846.246V21.879H909.673C921.902 21.879 932.289 24.0153 940.834 28.288C949.527 32.5607 956.01 38.454 960.282 45.968C964.555 53.3347 966.691 61.5853 966.691 70.72C966.691 81.0333 963.745 90.2417 957.851 98.345C952.105 106.448 943.56 112.194 932.215 115.583L968.017 177.021H925.364ZM884.037 91.715H907.463C914.388 91.715 919.545 90.0207 922.933 86.632C926.469 83.2433 928.237 78.455 928.237 72.267C928.237 66.3737 926.469 61.7327 922.933 58.344C919.545 54.9553 914.388 53.261 907.463 53.261H884.037V91.715Z" fill="#2671EA"/>
+</svg>
+</div><div class="spinner" style="width:44px;height:44px;border-width:4px"></div><p style="font-size:13px;color:var(--sl);font-weight:500">AI 피부 질환 스크리닝</p></div><div class="s-bot"></div></div><div class="scr" id="onboard"><div class="s-top"></div><div style="flex:1;display:flex;flex-direction:column;padding:0 24px 24px"><div style="display:flex;justify-content:flex-end;padding:8px 0"><button class="btn-chip" onclick="go('basic-info')">건너뛰기</button></div><div class="ob-slide" id="obs-0" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="width:200px;height:200px;background:var(--ps);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:32px"><span style="font-size:72px">🔬</span></div><h2 style="font-size:24px;font-weight:700;color:var(--id);text-align:center;line-height:1.3;margin-bottom:12px">AI가 피부를<br>분析합니다</h2><p style="font-size:14px;color:var(--sl);text-align:center;line-height:1.6;word-break:keep-all">사진 한 장으로 피부 질환을 스크리닝하고<br>맞춤 관리 방법을 안내해드립니다</p></div><div class="ob-slide" id="obs-1" style="flex:1;display:none;flex-direction:column;align-items:center;justify-content:center"><div style="width:200px;height:200px;background:rgba(16,185,129,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:32px"><span style="font-size:72px">🧬</span></div><h2 style="font-size:24px;font-weight:700;color:var(--id);text-align:center;line-height:1.3;margin-bottom:12px">3단계 AI<br>스크리닝</h2><p style="font-size:14px;color:var(--sl);text-align:center;line-height:1.6;word-break:keep-all">YOLO 병변 검출 → CNN 분류 → 멀티모달 분析으로<br>높은 정확도의 결과를 제공합니다</p></div><div class="ob-slide" id="obs-2" style="flex:1;display:none;flex-direction:column;align-items:center;justify-content:center"><div style="width:200px;height:200px;background:rgba(245,158,11,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:32px"><span style="font-size:72px">⚕️</span></div><h2 style="font-size:24px;font-weight:700;color:var(--id);text-align:center;line-height:1.3;margin-bottom:12px">안전하게<br>사용하세요</h2><p style="font-size:14px;color:var(--sl);text-align:center;line-height:1.6;word-break:keep-all">AiDER는 의학적 진단이 아닌<br><strong style="color:var(--id)">보조 스크리닝 도구</strong>입니다.</p></div><div class="ob-dots" id="ob-dots"><div class="ob-dot on"></div><div class="ob-dot"></div><div class="ob-dot"></div></div><button class="btn btn-p" id="ob-btn" onclick="obNext()">다음</button></div></div><div class="scr" id="basic-info"><div class="s-top"></div><div class="abar"><div style="width:44px"></div><span class="abar-title">기본 정보 입력</span><div style="width:44px"></div></div><div class="scroll px16 pb24" style="padding-top:24px"><p style="font-size:14px;color:var(--sl);margin-bottom:24px;line-height:1.6;word-break:keep-all">AI 分析 정확도 향상을 위해 기본 정보를 입력해 주세요.</p><div class="fg"><label class="fl">나이 <span style="color:var(--crit)">*</span></label><input class="input" type="number" min="1" max="100" placeholder="만 나이를 입력해 주세요"><p class="fh">만 나이 기준으로 입력해 주세요</p></div><div class="fg"><label class="fl">성별 <span style="color:var(--crit)">*</span></label><div class="gender-row"><button class="gender-btn" onclick="selGender(this)">남성</button><button class="gender-btn" onclick="selGender(this)">여성</button><button class="gender-btn" onclick="selGender(this)">응답 안함</button></div></div><div style="margin-top:32px"><button class="btn btn-p" onclick="go('home')">완료하기</button></div><p style="font-size:11px;color:var(--st);text-align:center;margin-top:16px;line-height:1.6;word-break:keep-all">수집된 정보는 AI 分析 목적으로만 활용됩니다.</p></div><div class="s-bot"></div></div><div class="scr" id="home"><div class="s-top"></div><div class="abar" style="border-bottom:none;padding:0 16px"><div style="display:flex;align-items:center"><svg style="height:22px;width:auto" viewBox="0 0 969 178" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M136.4 13.9543H174.289L37.8889 173.088H0L136.4 13.9543Z" fill="#000000"/>
+<path d="M60.6222 104.888H143.978V135.199H60.6222V104.888Z" fill="#000000"/>
+<path d="M195.91 13.667C212.708 13.667 227.388 16.9963 239.948 23.655C252.509 30.3137 262.194 39.6963 269.004 51.803C275.966 63.7583 279.446 77.6053 279.446 93.344C279.446 108.931 275.966 122.778 269.004 134.885C262.194 146.992 252.433 156.374 239.721 163.033C227.161 169.692 212.557 173.021 195.91 173.021H136.209V13.667H195.91ZM193.413 139.425C208.093 139.425 219.518 135.415 227.69 127.394C235.862 119.373 239.948 108.023 239.948 93.344C239.948 78.6647 235.862 67.239 227.69 59.067C219.518 50.895 208.093 46.809 193.413 46.809H175.026V139.425H193.413Z" fill="#2671EA"/>
+<path d="M136.4 13.9543H174.289L174.289 173.088H136.4L136.4 13.9543Z" fill="#000000"/>
+<path d="M434.567 149.617H376.665L367.383 177.021H327.824L383.958 21.879H427.716L483.85 177.021H443.849L434.567 149.617ZM424.843 120.445L405.616 63.648L386.61 120.445H424.843Z" fill="#000000"/>
+<path d="M519.94 40.885C513.31 40.885 507.859 38.9697 503.586 35.139C499.461 31.161 497.398 26.299 497.398 20.553C497.398 14.6597 499.461 9.79767 503.586 5.967C507.859 1.989 513.31 0 519.94 0C526.423 0 531.727 1.989 535.852 5.967C540.125 9.79767 542.261 14.6597 542.261 20.553C542.261 26.299 540.125 31.161 535.852 35.139C531.727 38.9697 526.423 40.885 519.94 40.885ZM538.725 53.703V177.021H500.934V53.703H538.725Z" fill="#000000"/>
+<path d="M624.235 21.879C640.589 21.879 654.88 25.1203 667.109 31.603C679.337 38.0857 688.767 47.2203 695.397 59.007C702.174 70.6463 705.563 84.1273 705.563 99.45C705.563 114.625 702.174 128.106 695.397 139.893C688.767 151.68 679.264 160.814 666.888 167.297C654.659 173.78 640.441 177.021 624.235 177.021H566.112V21.879H624.235ZM621.804 144.313C636.095 144.313 647.219 140.409 655.175 132.6C663.131 124.791 667.109 113.741 667.109 99.45C667.109 85.1587 663.131 74.035 655.175 66.079C647.219 58.123 636.095 54.145 621.804 54.145H603.903V144.313H621.804Z" fill="#2671EA"/>
+<path d="M764.473 52.156V83.538H815.082V112.71H764.473V146.744H821.712V177.021H726.682V21.879H821.712V52.156H764.473Z" fill="#2671EA"/>
+<path d="M925.364 177.021L893.098 118.456H884.037V177.021H846.246V21.879H909.673C921.902 21.879 932.289 24.0153 940.834 28.288C949.527 32.5607 956.01 38.454 960.282 45.968C964.555 53.3347 966.691 61.5853 966.691 70.72C966.691 81.0333 963.745 90.2417 957.851 98.345C952.105 106.448 943.56 112.194 932.215 115.583L968.017 177.021H925.364ZM884.037 91.715H907.463C914.388 91.715 919.545 90.0207 922.933 86.632C926.469 83.2433 928.237 78.455 928.237 72.267C928.237 66.3737 926.469 61.7327 922.933 58.344C919.545 54.9553 914.388 53.261 907.463 53.261H884.037V91.715Z" fill="#2671EA"/>
+</svg>
+</div><div style="flex:1"></div><button class="ibtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></button></div><div class="scroll px16 pb24"><div style="padding:16px 0 20px"><p style="font-size:14px;color:var(--sl);margin-bottom:4px">안녕하세요 👋</p><h2 style="font-size:20px;font-weight:600;color:var(--id);line-height:1.3;word-break:keep-all">오늘의 피부 상태는<br>어떠신가요?</h2></div><div class="hero" onclick="go('upload')"><div class="hero-inner"><span class="badge bdg-p" style="margin-bottom:12px">AI 피부 분析</span><h3 style="font-size:22px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:8px;word-break:keep-all">피부 상태를 지금<br>바로 확인해보세요</h3><p style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:20px">사진 한 장으로 AI 스크리닝 시작</p><div style="display:inline-flex;align-items:center;gap:8px;background:#2671EA;border-radius:9999px;padding:11px 20px"><span style="font-size:14px;font-weight:700;color:#fff">AI 진단 시작</span><span style="color:#fff;font-size:16px">→</span></div></div></div><div class="stat-row" style="margin-bottom:4px"><div class="stat-card"><div class="stat-val">4</div><div class="stat-lbl">총 진단 횟수</div></div><div class="stat-card"><div class="stat-val">91%</div><div class="stat-lbl">평균 신뢰도</div></div><div class="stat-card"><div class="stat-val">8초</div><div class="stat-lbl">평균 分析 시간</div></div></div><p class="sh">최근 진단 기록</p><div class="hi-item"><div class="hi-thumb">🔴</div><div class="hi-info"><div class="hi-top"><span class="hi-name">여드름 (Acne vulgaris)</span><span class="badge bdg-ok">저위험</span></div><div class="hi-date">2026.06.24 · 신뢰도 76%</div></div></div><div class="hi-item"><div class="hi-thumb">🟡</div><div class="hi-info"><div class="hi-top"><span class="hi-name">접촉성 피부염</span><span class="badge bdg-att">주의 필요</span></div><div class="hi-date">2026.06.20 · 신뢰도 62%</div></div></div><p class="sh">오늘의 피부 팁</p><div class="card-soft" style="margin-bottom:20px"><p style="font-size:14px;font-weight:700;color:var(--id);margin-bottom:6px">☀️ 여름철 자외선 주의</p><p style="font-size:13px;color:var(--sl);line-height:1.6;word-break:keep-all">자외선 차단제를 매일 사용하세요. SPF 30 이상 제품을 2~3시간마다 덧바르는 것이 권장됩니다.</p></div></div><nav class="tabs"><button class="tab on" onclick="goTab('home')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span><span>홈</span></button><button class="tab" onclick="goTab('upload')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg></span><span>진단</span></button><button class="tab" onclick="goTab('history')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span><span>기록</span></button><button class="tab" onclick="goTab('profile')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg></span><span>프로필</span><span class="tab-badge">1</span></button></nav><div class="s-bot"></div></div><div class="scr" id="upload"><div class="s-top"></div><div class="abar"><button class="ibtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button><span class="abar-title">피부 사진 업로드</span><div style="width:44px"></div></div><div class="stepbar"><div class="sdot on"></div><div class="sdot"></div><div class="sdot"></div><div class="sdot"></div><span class="step-lbl">1 / 4</span></div><div class="scroll px16 pb24" style="padding-top:12px"><h2 style="font-size:18px;font-weight:700;color:var(--id);margin-bottom:6px">피부 사진을 업로드해 주세요</h2><p style="font-size:13px;color:var(--sl);margin-bottom:20px;line-height:1.5;word-break:keep-all">병변 부위가 선명하게 보이도록 촬영해 주세요</p><div class="upzone" onclick="openCamera()"><div style="width:72px;height:72px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,.1);font-size:32px">📷</div><p style="font-size:15px;font-weight:700;color:var(--id)">여기를 눌러 사진 선택</p><p style="font-size:13px;color:var(--sl)">JPG, PNG 파일 지원</p></div><div style="display:flex;gap:10px;margin-bottom:16px"><button class="btn btn-p" style="flex:1" onclick="openCamera()">📷 카메라로 촬영</button><button class="btn btn-g" style="flex:1" onclick="startQCheck()">🖼 갤러리에서 선택</button></div><div class="card-soft"><p style="font-size:13px;font-weight:700;color:var(--id);margin-bottom:10px">📋 촬영 가이드</p><p style="font-size:13px;color:var(--sl);line-height:1.8;word-break:keep-all">✅ 병변 부위를 화면 중앙에 위치<br>✅ 밝은 자연광 또는 균일한 조명 사용<br>✅ 10~15cm 거리에서 촬영<br>❌ 너무 어두운 환경 피하기</p></div><p style="font-size:11px;color:var(--st);text-align:center;margin-top:16px;line-height:1.6;word-break:keep-all">업로드된 사진은 AI 分析 후 즉시 삭제됩니다</p></div></div><div class="scr" id="camera"><div class="cam-safe"></div><div class="cam-bar"><button class="cam-ibtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button><div style="flex:1;text-align:center;font-size:13px;color:rgba(255,255,255,.6);font-weight:500">피부 분析 촬영</div><button class="cam-ibtn" style="font-size:18px">⚡</button></div><div class="cam-viewfinder" onclick="onCamTap(event)"><div><div class="cam-guide"><div class="cam-corner tl"></div><div class="cam-corner tr"></div><div class="cam-corner bl"></div><div class="cam-corner br"></div><div class="cam-line-h"></div><div class="cam-line-v"></div><div class="cam-scan"></div><div class="focus-ring" id="focus-ring"></div></div><p class="cam-instruction">피부 부위를 프레임 안에 맞춰주세요</p></div></div><div class="cam-bottom"><button class="cam-side-btn" onclick="go('upload')" title="갤러리">🖼</button><button class="shutter" onclick="shootPhoto()"><div class="shutter-inner"></div></button><button class="cam-side-btn" title="반전">🔄</button></div><div class="cam-safe-bot"></div></div><div class="scr" id="preview"><div class="s-top"></div><div style="flex:1;background:linear-gradient(135deg,#f0d8c0 0%,#d4a878 50%,#b8865a 100%);position:relative;overflow:hidden"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:80px;opacity:.3">🫀</div><div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 60%,rgba(0,0,0,.5))"></div><div style="position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:center"><button class="cam-ibtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button><span class="badge bdg-ok" style="background:rgba(16,185,129,.9);color:#fff">이미지 선택됨</span></div></div><div style="background:#fff;padding:20px 16px 8px;flex-shrink:0"><p style="font-size:13px;color:var(--sl);margin-bottom:16px;text-align:center;word-break:keep-all">이 사진으로 AI 分析을 시작하시겠습니까?</p><button class="btn btn-p" style="margin-bottom:10px" onclick="usePhoto()">이 사진으로 分析하기</button><button class="btn btn-g" onclick="go('camera')">다시 촬영하기</button></div><div class="s-bot"></div></div><div class="scr" id="q-loading"><div class="s-top"></div><div style="height:48px;flex-shrink:0;border-bottom:1px solid var(--hls);display:flex;align-items:center;padding:0 16px"><span style="font-size:16px;font-weight:600;color:var(--id)">이미지 품질 검사</span></div><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:24px"><div class="spinner" style="width:48px;height:48px;border-width:4px"></div><p style="font-size:16px;font-weight:600;color:var(--id)">이미지 품질 확인 중...</p><p style="font-size:13px;color:var(--sl);text-align:center;line-height:1.6;word-break:keep-all">선명도, 밝기, 피부 영역 포함 여부를<br>자동으로 확인하고 있습니다</p><div class="progress" style="width:240px"><div class="progress-fill" id="qcheck-prog" style="width:0%"></div></div><button class="btn-chip" style="font-size:11px;color:var(--crit);margin-top:20px" onclick="go('q-fail')">⚠️ 품질 미달 케이스 시뮬레이션</button></div></div><div class="scr" id="q-pass"><div class="s-top"></div><div class="abar"><div style="width:44px"></div><span class="abar-title">품질 검사 결과</span><div style="width:44px"></div></div><div class="stepbar"><div class="sdot on"></div><div class="sdot"></div><div class="sdot"></div><div class="sdot"></div><span class="step-lbl">1 / 4</span></div><div class="qres"><div class="qicon qicon-ok">✅</div><h2 style="font-size:20px;font-weight:700;color:var(--id)">품질 검사 통과</h2><p style="font-size:14px;color:var(--sl);text-align:center;line-height:1.6;word-break:keep-all">이미지 품질이 分析 기준을 충족합니다.<br>다음 단계로 이동합니다...</p><div class="progress" style="width:200px"><div class="progress-fill" id="qpass-prog" style="width:0%"></div></div><div style="display:flex;flex-direction:column;gap:8px;text-align:left"><p style="font-size:13px;color:var(--sl)"><span style="color:var(--ok)">✓</span> 선명도: 양호</p><p style="font-size:13px;color:var(--sl)"><span style="color:var(--ok)">✓</span> 밝기: 적정 수준</p><p style="font-size:13px;color:var(--sl)"><span style="color:var(--ok)">✓</span> 피부 영역 포함: 확인됨</p></div></div></div><div class="scr" id="q-fail"><div class="s-top"></div><div class="abar"><div style="width:44px"></div><span class="abar-title">품질 검사 결과</span><div style="width:44px"></div></div><div class="stepbar"><div class="sdot on"></div><div class="sdot"></div><div class="sdot"></div><div class="sdot"></div><span class="step-lbl">1 / 4</span></div><div class="qres"><div class="qicon qicon-fail">⚠️</div><h2 style="font-size:20px;font-weight:700;color:var(--id)">품질 기준 미달</h2><p style="font-size:14px;color:var(--sl);text-align:center;line-height:1.6;word-break:keep-all">사진이 너무 어둡습니다.<br>아래 가이드를 참고하여 재촬영해 주세요.</p><div style="display:flex;flex-direction:column;gap:8px;text-align:left"><p style="font-size:13px;color:var(--sl)"><span style="color:var(--crit)">✗</span> 선명도: 기준 미달 (흔들림)</p><p style="font-size:13px;color:var(--sl)"><span style="color:var(--crit)">✗</span> 밝기: 너무 어두움</p><p style="font-size:13px;color:var(--sl)"><span style="color:var(--ok)">✓</span> 피부 영역: 확인됨</p></div><button class="btn btn-p" onclick="go('upload')">재촬영하기</button><button class="btn btn-g" onclick="go('q1')">그래도 계속하기</button></div></div><div class="scr" id="q1"><div class="s-top"></div><div class="abar"><button class="ibtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button><span class="abar-title">증상 정보</span><div style="width:44px"></div></div><div class="stepbar"><div class="sdot done"></div><div class="sdot on"></div><div class="sdot"></div><div class="sdot"></div><span class="step-lbl">2 / 4 · 증상</span></div><div class="scroll px16 pb24" style="padding-top:12px"><h2 style="font-size:18px;font-weight:700;color:var(--id);margin-bottom:4px">현재 증상을 알려주세요</h2><p style="font-size:13px;color:var(--sl);margin-bottom:20px;line-height:1.5">AI 分析 정확도 향상을 위한 문진입니다</p><div class="fg"><label class="fl">통증 정도</label><div class="sl-row"><span style="font-size:12px;color:var(--sl)">없음</span><input type="range" min="0" max="5" value="2" class="sl-input" oninput="updateSlider(this,'sv-pain')"><span style="font-size:12px;color:var(--sl)">심함</span><span class="sl-val" id="sv-pain">2</span></div></div><div class="fg"><label class="fl">가려움 정도</label><div class="sl-row"><span style="font-size:12px;color:var(--sl)">없음</span><input type="range" min="0" max="5" value="3" class="sl-input" oninput="updateSlider(this,'sv-itch')"><span style="font-size:12px;color:var(--sl)">심함</span><span class="sl-val" id="sv-itch">3</span></div></div><div class="fg"><label class="fl">증상 지속 기간</label><div class="sel-wrap"><select class="sel"><option>1일 미만</option><option>1~3일</option><option selected>4~7일</option><option>1~2주</option><option>2주 이상</option><option>1개월 이상</option></select></div></div><div class="fg"><label class="fl">동반 증상</label><div><div class="tgl-row"><span class="tgl-lbl">발열이 동반됩니까?</span><label class="tgl-sw"><input type="checkbox"><span class="tgl-track"></span></label></div><div class="tgl-row"><span class="tgl-lbl">고름이나 분비물이 있습니까?</span><label class="tgl-sw"><input type="checkbox"><span class="tgl-track"></span></label></div><div class="tgl-row"><span class="tgl-lbl">붓기가 있습니까?</span><label class="tgl-sw"><input type="checkbox"><span class="tgl-track"></span></label></div></div></div></div><div class="footer"><button class="btn btn-p" onclick="go('q2')">다음 단계</button></div></div><div class="scr" id="q2"><div class="s-top"></div><div class="abar"><button class="ibtn" onclick="go('q1')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button><span class="abar-title">생활습관 정보</span><div style="width:44px"></div></div><div class="stepbar"><div class="sdot done"></div><div class="sdot on"></div><div class="sdot"></div><div class="sdot"></div><span class="step-lbl">2 / 4 · 생활습관</span></div><div class="scroll px16 pb24" style="padding-top:12px"><h2 style="font-size:18px;font-weight:700;color:var(--id);margin-bottom:4px">생활습관을 알려주세요</h2><p style="font-size:13px;color:var(--sl);margin-bottom:20px;line-height:1.5">최근 1~2주간의 생활 패턴을 기준으로 선택해 주세요</p><div class="fg"><label class="fl">피부·생활 관련</label><div><div class="tgl-row"><span class="tgl-lbl">최근 면도를 하셨나요?</span><label class="tgl-sw"><input type="checkbox" checked><span class="tgl-track"></span></label></div><div class="tgl-row"><span class="tgl-lbl">최근 화장품을 바꾸셨나요?</span><label class="tgl-sw"><input type="checkbox"><span class="tgl-track"></span></label></div><div class="tgl-row"><span class="tgl-lbl">새로운 음식을 드셨나요?</span><label class="tgl-sw"><input type="checkbox"><span class="tgl-track"></span></label></div><div class="tgl-row"><span class="tgl-lbl">야외 활동이 많았나요?</span><label class="tgl-sw"><input type="checkbox" checked><span class="tgl-track"></span></label></div></div></div><div class="fg"><label class="fl">평균 수면 시간</label><div class="sel-wrap"><select class="sel"><option>5시간 미만</option><option>5~6시간</option><option selected>6~7시간</option><option>7~8시간</option><option>8시간 이상</option></select></div></div><div class="fg"><label class="fl">스트레스 정도</label><div class="sl-row"><span style="font-size:12px;color:var(--sl)">낮음</span><input type="range" min="0" max="5" value="3" class="sl-input" oninput="updateSlider(this,'sv-stress')"><span style="font-size:12px;color:var(--sl)">높음</span><span class="sl-val" id="sv-stress">3</span></div></div></div><div class="footer"><button class="btn btn-p" onclick="go('q3')">다음 단계</button></div></div><div class="scr" id="q3"><div class="s-top"></div><div class="abar"><button class="ibtn" onclick="go('q2')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button><span class="abar-title">발생 부위</span><div style="width:44px"></div></div><div class="stepbar"><div class="sdot done"></div><div class="sdot on"></div><div class="sdot"></div><div class="sdot"></div><span class="step-lbl">2 / 4 · 발생 부위</span></div><div class="scroll px16 pb24" style="padding-top:12px"><h2 style="font-size:18px;font-weight:700;color:var(--id);margin-bottom:4px">발생 부위를 선택해 주세요</h2><p style="font-size:13px;color:var(--sl);margin-bottom:20px;line-height:1.5;word-break:keep-all">해당하는 부위를 모두 선택해 주세요 (복수 선택 가능)</p><div class="bmap"><button class="bpart" onclick="togglePart(this)">얼굴</button><button class="bpart on" onclick="togglePart(this)">이마</button><button class="bpart" onclick="togglePart(this)">볼·턱</button><button class="bpart" onclick="togglePart(this)">목</button><button class="bpart" onclick="togglePart(this)">어깨</button><button class="bpart" onclick="togglePart(this)">가슴·배</button><button class="bpart" onclick="togglePart(this)">등·허리</button><button class="bpart" onclick="togglePart(this)">팔 (위)</button><button class="bpart" onclick="togglePart(this)">팔 (아래)</button><button class="bpart" onclick="togglePart(this)">손·손목</button><button class="bpart" onclick="togglePart(this)">허벅지</button><button class="bpart" onclick="togglePart(this)">종아리·발</button></div></div><div class="footer"><button class="btn btn-p" onclick="startAI()">AI 分析 시작</button><p style="font-size:11px;color:var(--st);text-align:center">분析에는 약 5~15초가 소요됩니다</p></div></div><div class="scr" id="ai-loading"><div class="s-top"></div><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px"><div style="margin-bottom:28px"><div style="display:flex;align-items:center"><svg style="height:36px;width:auto" viewBox="0 0 969 178" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M136.4 13.9543H174.289L37.8889 173.088H0L136.4 13.9543Z" fill="#000000"/>
+<path d="M60.6222 104.888H143.978V135.199H60.6222V104.888Z" fill="#000000"/>
+<path d="M195.91 13.667C212.708 13.667 227.388 16.9963 239.948 23.655C252.509 30.3137 262.194 39.6963 269.004 51.803C275.966 63.7583 279.446 77.6053 279.446 93.344C279.446 108.931 275.966 122.778 269.004 134.885C262.194 146.992 252.433 156.374 239.721 163.033C227.161 169.692 212.557 173.021 195.91 173.021H136.209V13.667H195.91ZM193.413 139.425C208.093 139.425 219.518 135.415 227.69 127.394C235.862 119.373 239.948 108.023 239.948 93.344C239.948 78.6647 235.862 67.239 227.69 59.067C219.518 50.895 208.093 46.809 193.413 46.809H175.026V139.425H193.413Z" fill="#2671EA"/>
+<path d="M136.4 13.9543H174.289L174.289 173.088H136.4L136.4 13.9543Z" fill="#000000"/>
+<path d="M434.567 149.617H376.665L367.383 177.021H327.824L383.958 21.879H427.716L483.85 177.021H443.849L434.567 149.617ZM424.843 120.445L405.616 63.648L386.61 120.445H424.843Z" fill="#000000"/>
+<path d="M519.94 40.885C513.31 40.885 507.859 38.9697 503.586 35.139C499.461 31.161 497.398 26.299 497.398 20.553C497.398 14.6597 499.461 9.79767 503.586 5.967C507.859 1.989 513.31 0 519.94 0C526.423 0 531.727 1.989 535.852 5.967C540.125 9.79767 542.261 14.6597 542.261 20.553C542.261 26.299 540.125 31.161 535.852 35.139C531.727 38.9697 526.423 40.885 519.94 40.885ZM538.725 53.703V177.021H500.934V53.703H538.725Z" fill="#000000"/>
+<path d="M624.235 21.879C640.589 21.879 654.88 25.1203 667.109 31.603C679.337 38.0857 688.767 47.2203 695.397 59.007C702.174 70.6463 705.563 84.1273 705.563 99.45C705.563 114.625 702.174 128.106 695.397 139.893C688.767 151.68 679.264 160.814 666.888 167.297C654.659 173.78 640.441 177.021 624.235 177.021H566.112V21.879H624.235ZM621.804 144.313C636.095 144.313 647.219 140.409 655.175 132.6C663.131 124.791 667.109 113.741 667.109 99.45C667.109 85.1587 663.131 74.035 655.175 66.079C647.219 58.123 636.095 54.145 621.804 54.145H603.903V144.313H621.804Z" fill="#2671EA"/>
+<path d="M764.473 52.156V83.538H815.082V112.71H764.473V146.744H821.712V177.021H726.682V21.879H821.712V52.156H764.473Z" fill="#2671EA"/>
+<path d="M925.364 177.021L893.098 118.456H884.037V177.021H846.246V21.879H909.673C921.902 21.879 932.289 24.0153 940.834 28.288C949.527 32.5607 956.01 38.454 960.282 45.968C964.555 53.3347 966.691 61.5853 966.691 70.72C966.691 81.0333 963.745 90.2417 957.851 98.345C952.105 106.448 943.56 112.194 932.215 115.583L968.017 177.021H925.364ZM884.037 91.715H907.463C914.388 91.715 919.545 90.0207 922.933 86.632C926.469 83.2433 928.237 78.455 928.237 72.267C928.237 66.3737 926.469 61.7327 922.933 58.344C919.545 54.9553 914.388 53.261 907.463 53.261H884.037V91.715Z" fill="#2671EA"/>
+</svg>
+</div></div><div class="spinner" style="width:44px;height:44px;border-width:4px;margin-bottom:16px"></div><p style="font-size:16px;font-weight:600;color:var(--id);margin-bottom:6px">AI가 分析 중입니다</p><p style="font-size:13px;color:var(--sl);margin-bottom:32px">잠시만 기다려 주세요...</p><div style="width:100%;max-width:340px"><div class="lstep"><div class="lstep-icon act" id="li0"><span id="lic0">⏳</span></div><div class="lstep-info"><div class="lstep-name">병변 영역 검출</div><div class="lstep-desc">YOLO v8 기반 병변 탐지</div><div class="lstep-time" id="lt0"></div></div><span class="lstep-st act" id="lst0">진행 중</span></div><div class="lstep"><div class="lstep-icon" id="li1"><span id="lic1">⏸</span></div><div class="lstep-info"><div class="lstep-name">피부 질환 분류</div><div class="lstep-desc">EfficientNet-B0 CNN 모델</div><div class="lstep-time" id="lt1"></div></div><span class="lstep-st wait" id="lst1">대기 중</span></div><div class="lstep"><div class="lstep-icon" id="li2"><span id="lic2">⏸</span></div><div class="lstep-info"><div class="lstep-name">종합 分析</div><div class="lstep-desc">멀티모달 결합 (이미지 + 문진)</div><div class="lstep-time" id="lt2"></div></div><span class="lstep-st wait" id="lst2">대기 중</span></div></div><div class="progress" style="width:200px;margin-top:24px"><div class="progress-fill" id="ai-prog" style="width:3%"></div></div></div></div><div class="scr" id="yolo-vis"><div class="s-top"></div><div class="abar"><div style="width:44px"></div><span class="abar-title">병변 감지 결과</span><div style="width:44px"></div></div><div class="scroll px16 pb24" style="padding-top:16px"><div class="yolo-img"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:100px;opacity:.2">🫀</div><div class="scan-line"></div><div class="yolo-bb" style="top:22%;left:28%;width:40%;height:38%"><span class="yolo-bb-lbl">병변 #1 (0.92)</span></div><div class="yolo-bb" style="top:55%;left:55%;width:24%;height:22%;border-color:var(--att)"><span class="yolo-bb-lbl" style="background:var(--att)">병변 #2 (0.78)</span></div></div><div style="display:flex;align-items:center;gap:8px;margin-bottom:16px"><span class="badge bdg-p">YOLO v8</span><span class="badge bdg-ok">감지 완료</span></div><h3 style="font-size:18px;font-weight:700;color:var(--id);margin-bottom:4px">병변 2개 감지됨</h3><p style="font-size:13px;color:var(--sl);margin-bottom:16px;line-height:1.5;word-break:keep-all">AI가 사진에서 2개의 피부 병변을 감지했습니다. 이제 질환 분류 모델로 전달합니다.</p><div class="card" style="margin-bottom:16px"><p style="font-size:13px;font-weight:700;color:var(--id);margin-bottom:12px">감지된 병변 정보</p><div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:12px"><div style="width:12px;height:12px;border-radius:50%;background:var(--p);flex-shrink:0"></div><div style="flex:1"><p style="font-size:14px;font-weight:600;color:var(--id)">병변 #1</p><p style="font-size:12px;color:var(--sl)">위치: 이마 좌측 · 크기: 중간</p></div><span style="font-size:13px;font-weight:700;color:var(--p)">신뢰도 0.92</span></div><div style="display:flex;align-items:center;gap:12px"><div style="width:12px;height:12px;border-radius:50%;background:var(--att);flex-shrink:0"></div><div style="flex:1"><p style="font-size:14px;font-weight:600;color:var(--id)">병변 #2</p><p style="font-size:12px;color:var(--sl)">위치: 이마 우측 · 크기: 소</p></div><span style="font-size:13px;font-weight:700;color:var(--att)">신뢰도 0.78</span></div></div></div></div><div class="footer"><button class="btn btn-p" onclick="continueFromYOLO()">다음 단계 (질환 분류) →</button></div></div><div class="scr" id="result"><div class="s-top"></div><div class="abar"><button class="ibtn" onclick="go('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button><span class="abar-title">진단 결과</span><button class='ibtn' onclick='openSaveSheet()'>💾</button></div><div class="scroll px16 pb24" style="padding-top:16px"><!-- Diagnosis image with animated bboxes --><div class="diag-img"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:100px;opacity:.2">🫀</div><div class="diag-bb" style="top:22%;left:28%;width:40%;height:38%;transform:scale(0.8)"><span class="diag-bb-lbl">병변 #1 (0.92)</span></div><div class="diag-bb" style="top:55%;left:55%;width:24%;height:22%;border-color:var(--att);transform:scale(0.8)"><span class="diag-bb-lbl" style="background:var(--att)">병변 #2 (0.78)</span></div></div><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap"><span class="badge bdg-ok">저위험</span><span class="badge bdg-p">AI 분析 완료</span><span style="font-size:11px;color:var(--st);margin-left:auto">2026.06.24 14:32</span></div><h2 style="font-size:24px;font-weight:700;color:var(--id);margin-bottom:4px">여드름</h2><p style="font-size:15px;color:var(--sl);margin-bottom:8px">Acne vulgaris</p><div class="result-confidence"><span class="big-num" id="confidence-num">0%</span><span style="font-size:14px;font-weight:400;color:var(--sl);margin-left:6px">신뢰도</span></div><div class="card" style="margin-bottom:16px"><p style="font-size:13px;font-weight:700;color:var(--id);margin-bottom:14px">감별 후보 (Top 3)</p><div class="pb-item"><div class="pb-row"><span class="pb-name"><strong>여드름</strong></span><span class="pb-pct" style="color:var(--p)">76%</span></div><div class="pb-track"><div class="pb-fill pb-hi"></div></div></div><div class="pb-item"><div class="pb-row"><span class="pb-name">모낭염</span><span class="pb-pct" style="color:var(--att)">11%</span></div><div class="pb-track"><div class="pb-fill pb-md"></div></div></div><div class="pb-item"><div class="pb-row"><span class="pb-name">접촉성 피부염</span><span class="pb-pct" style="color:var(--st)">5%</span></div><div class="pb-track"><div class="pb-fill pb-lo"></div></div></div><div style="text-align:center;margin-top:12px"><button class="btn-chip" style="font-size:12px" onclick="go('result-detail')">질환 상세 정보 보기 →</button></div></div><div class="hosp-row hosp-no"><span style="font-size:22px">✅</span><div><p style="font-size:14px;font-weight:700;color:var(--ok)">병원 방문 불필요</p><p style="font-size:12px;color:var(--sl);word-break:keep-all">위험 신호가 감지되지 않았습니다. 아래 일반의약품으로 관리하세요.</p></div></div><div class="card" style="margin-bottom:16px"><p style="font-size:13px;font-weight:700;color:var(--id);margin-bottom:14px">💊 추천 일반의약품 성분</p><div class="otc-item"><div class="otc-rank">1</div><div style="flex:1"><div class="otc-nm">Benzoyl Peroxide</div><div class="otc-sub">항균 작용, 모공 청결 유지</div></div><span class="otc-score">0.92</span></div><div class="otc-item"><div class="otc-rank">2</div><div style="flex:1"><div class="otc-nm">Salicylic Acid</div><div class="otc-sub">각질 제거, 모공 수렴</div></div><span class="otc-score">0.78</span></div><div class="otc-item"><div class="otc-rank">3</div><div style="flex:1"><div class="otc-nm">Azelaic Acid</div><div class="otc-sub">항균·항염, 색소침착 완화</div></div><span class="otc-score">0.70</span></div><div class="otc-item"><div class="otc-rank" style="background:var(--sf);color:var(--sl)">4</div><div style="flex:1"><div class="otc-nm">저자극 보습제</div><div class="otc-sub">피부 장벽 강화, 자극 완화</div></div><span class="otc-score" style="color:var(--sl)">0.60</span></div></div><div class="card-soft" style="margin-bottom:16px"><p style="font-size:13px;font-weight:700;color:var(--id);margin-bottom:8px">⚠️ 주의사항</p><p style="font-size:13px;color:var(--sl);line-height:1.8;word-break:keep-all">• 피부 자극 발생 시 사용 중단<br>• 1~2주 이상 호전 없을 시 병원 방문 권장<br>• 눈·입 주변 사용 금지<br>• 민감성 피부는 저농도부터 사용</p></div><div style="text-align:center;margin-bottom:8px"><button class="btn-chip" style="font-size:11px;color:var(--crit)" onclick="go('result-danger')">🔴 고위험 케이스 시뮬레이션 보기</button></div><p style="font-size:11px;color:var(--st);text-align:center;line-height:1.6;margin-bottom:8px;word-break:keep-all">※ 본 결과는 의학적 진단이 아닌 AI 보조 스크리닝입니다.</p></div><div class="footer"><div class="footer-row"><button class="btn btn-g" style="flex:1;font-size:14px" onclick="go('upload')">재분析하기</button><button class="btn btn-p" style="flex:1;font-size:14px" onclick="openSaveSheet()">저장하기</button></div></div><!-- Save sheet --><div id="save-sheet"><div class="save-sheet-inner"><div class="sheet-handle"></div><p style="font-size:18px;font-weight:700;color:var(--id);margin-bottom:16px">저장 방법 선택</p><button class="sheet-btn" onclick="saveAction('img')"><div class="sheet-btn-icon" style="background:var(--ps)">🖼</div><span class="sheet-btn-lbl">이미지로 저장</span></button><button class="sheet-btn" onclick="saveAction('clip')"><div class="sheet-btn-icon" style="background:rgba(16,185,129,.1)">🔗</div><span class="sheet-btn-lbl">링크 복사</span></button><button class="sheet-btn" onclick="saveAction('share')"><div class="sheet-btn-icon" style="background:rgba(245,158,11,.1)">📤</div><span class="sheet-btn-lbl">공유하기</span></button><button class="sheet-close" onclick="closeSaveSheet()">취소</button><div style="height:34px"></div></div></div><div id="toast"></div><!-- Success overlay --><div id="success-overlay"><div class="success-icon">✅</div><h3 style="font-size:20px;font-weight:700;color:var(--id);margin-top:16px" id="success-msg">저장 완료!</h3></div></div><div class="scr" id="result-detail"><div class="s-top"></div><div class="abar"><button class="ibtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button><span class="abar-title">여드름 (Acne vulgaris)</span><div style="width:44px"></div></div><div class="rtab-bar"><button class="rtab on" onclick="switchRTab('rt0',0)">개요</button><button class="rtab" onclick="switchRTab('rt1',1)">증상</button><button class="rtab" onclick="switchRTab('rt2',2)">권장사항</button></div><div id="rt0" class="rtab-content on"><div style="display:flex;align-items:center;gap:10px;margin-bottom:16px"><span class="badge bdg-ok">저위험</span><span style="font-size:13px;color:var(--sl)">신뢰도 76%</span></div><p style="font-size:14px;font-weight:700;color:var(--id);margin-bottom:10px">질환 개요</p><p style="font-size:14px;color:var(--ink);line-height:1.7;margin-bottom:16px;word-break:keep-all">여드름(Acne vulgaris)은 모낭과 피지선에서 발생하는 만성 염증성 피부 질환입니다. 주로 사춘기에 시작되지만 성인에서도 흔히 발생합니다.</p><div class="card-soft" style="margin-bottom:16px"><p style="font-size:13px;font-weight:700;color:var(--id);margin-bottom:8px">주요 원인</p><p style="font-size:13px;color:var(--sl);line-height:1.8;word-break:keep-all">• 과도한 피지 분비<br>• 모공 막힘 (각질 과다)<br>• 피부 상재균 증식<br>• 호르몬 변화<br>• 스트레스, 수면 부족</p></div><div class="card-soft"><p style="font-size:13px;font-weight:700;color:var(--id);margin-bottom:8px">유병률</p><p style="font-size:13px;color:var(--sl);line-height:1.6;word-break:keep-all">전 세계 인구의 약 9.4%가 여드름을 경험하며, 청소년의 경우 80% 이상에서 관찰됩니다.</p></div></div><div id="rt1" class="rtab-content"><p style="font-size:14px;font-weight:700;color:var(--id);margin-bottom:16px">주요 증상</p><div style="display:flex;flex-direction:column;gap:12px"><div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><span style="font-size:20px">🔴</span><p style="font-size:14px;font-weight:700;color:var(--id)">구진 (Papule)</p></div><p style="font-size:13px;color:var(--sl);line-height:1.6;word-break:keep-all">붉고 작은 염증성 돌기. 고름 없이 단단하게 만져짐</p></div><div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><span style="font-size:20px">⚪</span><p style="font-size:14px;font-weight:700;color:var(--id)">면포 (Comedone)</p></div><p style="font-size:13px;color:var(--sl);line-height:1.6;word-break:keep-all">모공이 막혀 형성. 블랙헤드(개방형)·화이트헤드(폐쇄형)</p></div><div class="card"><div style="display:flex;align-items:center;gap:12px;margin-bottom:6px"><span style="font-size:20px">🟡</span><p style="font-size:14px;font-weight:700;color:var(--id)">농포 (Pustule)</p></div><p style="font-size:13px;color:var(--sl);line-height:1.6;word-break:keep-all">고름을 포함한 염증성 병변. 흰색 또는 황색 내용물 관찰</p></div></div></div><div id="rt2" class="rtab-content"><p style="font-size:14px;font-weight:700;color:var(--id);margin-bottom:16px">관리 권장사항</p><div class="card" style="margin-bottom:12px;border-color:var(--ps)"><p style="font-size:13px;font-weight:700;color:var(--p);margin-bottom:8px">1단계 — 일반의약품 자가 관리</p><p style="font-size:13px;color:var(--sl);line-height:1.8;word-break:keep-all">• Benzoyl Peroxide 2.5~5% 제품으로 시작<br>• Salicylic Acid 클렌저로 모공 청결 유지<br>• 저자극 무향 보습제로 피부 장벽 강화</p></div><div class="card" style="margin-bottom:12px"><p style="font-size:13px;font-weight:700;color:var(--att);margin-bottom:8px">2단계 — 생활습관 개선</p><p style="font-size:13px;color:var(--sl);line-height:1.8;word-break:keep-all">• 세안 하루 2회 (과도한 세안 금지)<br>• 수면 7~8시간 유지<br>• 손으로 얼굴 만지지 않기</p></div><div class="card" style="margin-bottom:12px;border-color:rgba(239,68,68,.3)"><p style="font-size:13px;font-weight:700;color:var(--crit);margin-bottom:8px">병원 방문이 필요한 경우</p><p style="font-size:13px;color:var(--sl);line-height:1.8;word-break:keep-all">• 결절·낭포 발생 (흉터 위험)<br>• 2주 이상 호전 없을 때<br>• 광범위한 병변 확산</p></div><button class="btn btn-g" onclick="go('result')">← 결과 화면으로</button></div></div><div class="scr" id="result-danger"><div class="s-top"></div><div class="abar"><button class="ibtn" onclick="go('result')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button><span class="abar-title">진단 결과</span><div style="width:44px"></div></div><div class="scroll px16 pb24" style="padding-top:16px"><div class="danger-banner"><span style="font-size:24px;flex-shrink:0">🚨</span><div><p style="font-size:15px;font-weight:700;color:var(--crit)">즉시 병원 방문 권고</p><p style="font-size:13px;color:var(--sl);margin-top:4px;word-break:keep-all">위험 신호가 감지되었습니다. 빠른 시일 내에 피부과 전문의 진료를 받으세요.</p></div></div><div class="diag-img" style="border:2px solid rgba(239,68,68,.3)"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:100px;opacity:.2">🔴</div><div class="diag-bb" style="top:18%;left:18%;width:58%;height:52%;border-color:var(--crit);opacity:1"><span class="diag-bb-lbl" style="background:var(--crit)">광범위 병변 (0.88)</span></div></div><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="badge bdg-crit">고위험</span><span class="badge bdg-p">AI 분析 완료</span></div><h2 style="font-size:24px;font-weight:700;color:var(--id);margin-bottom:4px">접촉성 피부염</h2><p style="font-size:15px;color:var(--sl);margin-bottom:4px">Contact dermatitis (중증 의심)</p><p style="font-size:28px;font-weight:700;color:var(--crit);margin-bottom:16px">62% <span style="font-size:14px;font-weight:400;color:var(--sl)">신뢰도</span></p><div class="card" style="margin-bottom:16px"><p style="font-size:13px;font-weight:700;color:var(--id);margin-bottom:14px">감별 후보 (Top 3)</p><div class="pb-item"><div class="pb-row"><span class="pb-name"><strong>접촉성 피부염</strong></span><span class="pb-pct" style="color:var(--crit)">62%</span></div><div class="pb-track"><div class="pb-fill" style="width:62%;background:var(--crit)"></div></div></div><div class="pb-item"><div class="pb-row"><span class="pb-name">아토피 피부염</span><span class="pb-pct" style="color:var(--att)">21%</span></div><div class="pb-track"><div class="pb-fill pb-md" style="width:21%"></div></div></div><div class="pb-item"><div class="pb-row"><span class="pb-name">건선</span><span class="pb-pct" style="color:var(--st)">8%</span></div><div class="pb-track"><div class="pb-fill pb-lo" style="width:8%"></div></div></div></div><div class="hosp-row hosp-yes"><span style="font-size:22px">🏥</span><div><p style="font-size:14px;font-weight:700;color:var(--crit)">병원 방문 필요</p><p style="font-size:12px;color:var(--sl);word-break:keep-all">위험 신호가 감지되었습니다. 자가 치료를 권장하지 않습니다.</p></div></div><div class="card" style="margin-bottom:16px;border-color:rgba(239,68,68,.25)"><p style="font-size:13px;font-weight:700;color:var(--crit);margin-bottom:10px">🚨 감지된 위험 신호</p><p style="font-size:13px;color:var(--ink);line-height:1.8;word-break:keep-all">• 광범위한 병변 면적 감지<br>• 문진 결과: 발열 동반 확인<br>• 빠른 진행 가능성<br>• 피부 장벽 손상 패턴</p></div><button class="btn btn-p" style="margin-bottom:10px" onclick="go('hospital-map')">🏥 주변 피부과 찾기</button><button class="btn btn-s" style="margin-bottom:16px" onclick="go('upload')">재분析하기</button><p style="font-size:11px;color:var(--st);text-align:center;line-height:1.6;word-break:keep-all">※ 본 결과는 의학적 진단이 아닌 AI 보조 스크리닝입니다.</p></div></div><div class="scr" id="hospital-map"><div class="s-top"></div><div class="abar"><button class="ibtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button><span class="abar-title">주변 피부과</span><div style="width:44px"></div></div><div class="scroll px16 pb24" style="padding-top:16px"><div style="width:100%;height:140px;background:linear-gradient(135deg,#E8F0FE 0%,#D2E3FC 100%);border-radius:20px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;border:1px solid rgba(38,113,234,.2);position:relative;overflow:hidden"><div style="text-align:center"><p style="font-size:32px;margin-bottom:4px">🗺</p><p style="font-size:13px;color:var(--p);font-weight:600">지도 로딩 중...</p></div></div><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><p style="font-size:13px;font-weight:700;color:var(--sl)">현재 위치 기준 · 3개 결과</p><button class="btn-chip" style="font-size:12px">지금 진료 중</button></div><div class="hosp-card"><div class="hosp-icon">🏥</div><div style="flex:1"><div class="hosp-name">울산대학교병원 피부과</div><div class="hosp-info">울산 동구 전하로 171 · ⭐4.5</div><div style="margin-top:6px"><span class="hosp-open open-yes">진료 중</span><span style="font-size:12px;color:var(--sl);margin-left:8px">오늘 18:00까지</span></div></div><div style="text-align:right;flex-shrink:0"><div class="hosp-dist">1.2km</div><div style="font-size:11px;color:var(--sl)">도보 15분</div></div></div><div class="hosp-card"><div class="hosp-icon">🏥</div><div style="flex:1"><div class="hosp-name">이레피부과의원</div><div class="hosp-info">울산 남구 삼산로 · ⭐4.7</div><div style="margin-top:6px"><span class="hosp-open open-yes">진료 중</span><span style="font-size:12px;color:var(--sl);margin-left:8px">오늘 19:00까지</span></div></div><div style="text-align:right;flex-shrink:0"><div class="hosp-dist">2.8km</div><div style="font-size:11px;color:var(--sl)">차량 8분</div></div></div><div class="hosp-card"><div class="hosp-icon">🏥</div><div style="flex:1"><div class="hosp-name">서울피부과 울산점</div><div class="hosp-info">울산 중구 성남동 · ⭐4.3</div><div style="margin-top:6px"><span class="hosp-open open-no">진료 종료</span><span style="font-size:12px;color:var(--sl);margin-left:8px">내일 09:00</span></div></div><div style="text-align:right;flex-shrink:0"><div class="hosp-dist" style="color:var(--st)">4.1km</div><div style="font-size:11px;color:var(--sl)">차량 12분</div></div></div><div class="card-soft" style="margin-top:4px"><p style="font-size:12px;color:var(--sl);line-height:1.6;word-break:keep-all">📍 위치 데이터는 데모 목적으로 설정된 값입니다.</p></div></div></div><div class="scr" id="history"><div class="s-top"></div><div class="abar"><div style="width:44px"></div><span class="abar-title">진단 기록</span><div style="width:44px"></div></div><div id="ptr-ind" class="ptr-indicator"><div class="spinner" style="width:20px;height:20px;border-width:2px"></div><span>업데이트 중...</span></div><div style="padding:10px 16px;display:flex;gap:8px;overflow-x:auto;flex-shrink:0;scrollbar-width:none"><button class="btn-chip on">전체</button><button class="btn-chip">여드름</button><button class="btn-chip">습진</button><button class="btn-chip">피부염</button><button class="btn-chip">기타</button></div><div class="scroll px16 pb24" id="history-scroll" ontouchstart="ptrStart(event)" ontouchend="ptrEnd(event)"><p class="sh">2026년 6월</p><div class="hi-item" onclick="go('result')"><div class="hi-thumb">🔴</div><div class="hi-info"><div class="hi-top"><span class="hi-name">여드름 (Acne vulgaris)</span><span class="badge bdg-ok">저위험</span></div><div class="hi-date">2026.06.24 · 신뢰도 76% · 이마</div></div></div><div class="hi-item" onclick="go('result-danger')"><div class="hi-thumb">🟡</div><div class="hi-info"><div class="hi-top"><span class="hi-name">접촉성 피부염</span><span class="badge bdg-att">주의 필요</span></div><div class="hi-date">2026.06.20 · 신뢰도 62% · 팔</div></div></div><div class="hi-item"><div class="hi-thumb">🟢</div><div class="hi-info"><div class="hi-top"><span class="hi-name">모낭염</span><span class="badge bdg-ok">저위험</span></div><div class="hi-date">2026.06.15 · 신뢰도 83% · 목</div></div></div><p class="sh">2026년 5월</p><div class="hi-item"><div class="hi-thumb">🔵</div><div class="hi-info"><div class="hi-top"><span class="hi-name">지루성 피부염</span><span class="badge bdg-n">이전 기록</span></div><div class="hi-date">2026.05.30 · 신뢰도 71% · 두피</div></div></div></div><nav class="tabs"><button class="tab" onclick="goTab('home')" style="position:relative"><span class="ti"><div class="scr" id="home"><div class="s-top"></div><div class="abar" style="border-bottom:none;padding:0 16px"><div style="display:flex;align-items:center"><svg style="height:22px;width:auto" viewBox="0 0 969 178" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M136.4 13.9543H174.289L37.8889 173.088H0L136.4 13.9543Z" fill="#000000"/>
+<path d="M60.6222 104.888H143.978V135.199H60.6222V104.888Z" fill="#000000"/>
+<path d="M195.91 13.667C212.708 13.667 227.388 16.9963 239.948 23.655C252.509 30.3137 262.194 39.6963 269.004 51.803C275.966 63.7583 279.446 77.6053 279.446 93.344C279.446 108.931 275.966 122.778 269.004 134.885C262.194 146.992 252.433 156.374 239.721 163.033C227.161 169.692 212.557 173.021 195.91 173.021H136.209V13.667H195.91ZM193.413 139.425C208.093 139.425 219.518 135.415 227.69 127.394C235.862 119.373 239.948 108.023 239.948 93.344C239.948 78.6647 235.862 67.239 227.69 59.067C219.518 50.895 208.093 46.809 193.413 46.809H175.026V139.425H193.413Z" fill="#2671EA"/>
+<path d="M136.4 13.9543H174.289L174.289 173.088H136.4L136.4 13.9543Z" fill="#000000"/>
+<path d="M434.567 149.617H376.665L367.383 177.021H327.824L383.958 21.879H427.716L483.85 177.021H443.849L434.567 149.617ZM424.843 120.445L405.616 63.648L386.61 120.445H424.843Z" fill="#000000"/>
+<path d="M519.94 40.885C513.31 40.885 507.859 38.9697 503.586 35.139C499.461 31.161 497.398 26.299 497.398 20.553C497.398 14.6597 499.461 9.79767 503.586 5.967C507.859 1.989 513.31 0 519.94 0C526.423 0 531.727 1.989 535.852 5.967C540.125 9.79767 542.261 14.6597 542.261 20.553C542.261 26.299 540.125 31.161 535.852 35.139C531.727 38.9697 526.423 40.885 519.94 40.885ZM538.725 53.703V177.021H500.934V53.703H538.725Z" fill="#000000"/>
+<path d="M624.235 21.879C640.589 21.879 654.88 25.1203 667.109 31.603C679.337 38.0857 688.767 47.2203 695.397 59.007C702.174 70.6463 705.563 84.1273 705.563 99.45C705.563 114.625 702.174 128.106 695.397 139.893C688.767 151.68 679.264 160.814 666.888 167.297C654.659 173.78 640.441 177.021 624.235 177.021H566.112V21.879H624.235ZM621.804 144.313C636.095 144.313 647.219 140.409 655.175 132.6C663.131 124.791 667.109 113.741 667.109 99.45C667.109 85.1587 663.131 74.035 655.175 66.079C647.219 58.123 636.095 54.145 621.804 54.145H603.903V144.313H621.804Z" fill="#2671EA"/>
+<path d="M764.473 52.156V83.538H815.082V112.71H764.473V146.744H821.712V177.021H726.682V21.879H821.712V52.156H764.473Z" fill="#2671EA"/>
+<path d="M925.364 177.021L893.098 118.456H884.037V177.021H846.246V21.879H909.673C921.902 21.879 932.289 24.0153 940.834 28.288C949.527 32.5607 956.01 38.454 960.282 45.968C964.555 53.3347 966.691 61.5853 966.691 70.72C966.691 81.0333 963.745 90.2417 957.851 98.345C952.105 106.448 943.56 112.194 932.215 115.583L968.017 177.021H925.364ZM884.037 91.715H907.463C914.388 91.715 919.545 90.0207 922.933 86.632C926.469 83.2433 928.237 78.455 928.237 72.267C928.237 66.3737 926.469 61.7327 922.933 58.344C919.545 54.9553 914.388 53.261 907.463 53.261H884.037V91.715Z" fill="#2671EA"/>
+</svg>
+</div><div style="flex:1"></div><button class="ibtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></button></div><div class="scroll px16 pb24"><div style="padding:16px 0 20px"><p style="font-size:14px;color:var(--sl);margin-bottom:4px">안녕하세요 👋</p><h2 style="font-size:20px;font-weight:600;color:var(--id);line-height:1.3;word-break:keep-all">오늘의 피부 상태는<br>어떠신가요?</h2></div><div class="hero" onclick="go('upload')"><div class="hero-inner"><span class="badge bdg-p" style="margin-bottom:12px">AI 피부 분析</span><h3 style="font-size:22px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:8px;word-break:keep-all">피부 상태를 지금<br>바로 확인해보세요</h3><p style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:20px">사진 한 장으로 AI 스크리닝 시작</p><div style="display:inline-flex;align-items:center;gap:8px;background:#2671EA;border-radius:9999px;padding:11px 20px"><span style="font-size:14px;font-weight:700;color:#fff">AI 진단 시작</span><span style="color:#fff;font-size:16px">→</span></div></div></div><div class="stat-row" style="margin-bottom:4px"><div class="stat-card"><div class="stat-val">4</div><div class="stat-lbl">총 진단 횟수</div></div><div class="stat-card"><div class="stat-val">91%</div><div class="stat-lbl">평균 신뢰도</div></div><div class="stat-card"><div class="stat-val">8초</div><div class="stat-lbl">평균 分析 시간</div></div></div><p class="sh">최근 진단 기록</p><div class="hi-item"><div class="hi-thumb">🔴</div><div class="hi-info"><div class="hi-top"><span class="hi-name">여드름 (Acne vulgaris)</span><span class="badge bdg-ok">저위험</span></div><div class="hi-date">2026.06.24 · 신뢰도 76%</div></div></div><div class="hi-item"><div class="hi-thumb">🟡</div><div class="hi-info"><div class="hi-top"><span class="hi-name">접촉성 피부염</span><span class="badge bdg-att">주의 필요</span></div><div class="hi-date">2026.06.20 · 신뢰도 62%</div></div></div><p class="sh">오늘의 피부 팁</p><div class="card-soft" style="margin-bottom:20px"><p style="font-size:14px;font-weight:700;color:var(--id);margin-bottom:6px">☀️ 여름철 자외선 주의</p><p style="font-size:13px;color:var(--sl);line-height:1.6;word-break:keep-all">자외선 차단제를 매일 사용하세요. SPF 30 이상 제품을 2~3시간마다 덧바르는 것이 권장됩니다.</p></div></div><nav class="tabs"><button class="tab on" onclick="goTab('home')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span><span>홈</span></button><button class="tab" onclick="goTab('upload')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg></span><span>진단</span></button><button class="tab" onclick="goTab('history')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span><span>기록</span></button><button class="tab" onclick="goTab('profile')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg></span><span>프로필</span><span class="tab-badge">1</span></button></nav><div class="s-bot"></div></div></span><span>홈</span></button><button class="tab" onclick="goTab('upload')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg></span><span>진단</span></button><button class="tab on" onclick="goTab('history')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span><span>기록</span></button><button class="tab" onclick="goTab('profile')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg></span><span>프로필</span><span class="tab-badge">1</span></button></nav><div class="s-bot"></div></div><div class="scr" id="profile"><div class="s-top"></div><div class="abar"><div style="width:44px"></div><span class="abar-title">프로필</span><div style="width:44px"></div></div><div class="scroll px16 pb24"><div style="display:flex;flex-direction:column;align-items:center;padding:24px 0 20px;gap:12px"><div style="width:72px;height:72px;border-radius:50%;background:var(--ps);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:var(--p)">김</div><div style="text-align:center"><p style="font-size:18px;font-weight:700;color:var(--id)">김강민</p><p style="font-size:13px;color:var(--sl);margin-top:4px">22세 · 남성 · UNIST</p></div><div style="display:flex;gap:20px"><div style="text-align:center"><p style="font-size:20px;font-weight:700;color:var(--p)">4</p><p style="font-size:12px;color:var(--sl)">총 진단</p></div><div style="width:1px;background:var(--hls)"></div><div style="text-align:center"><p style="font-size:20px;font-weight:700;color:var(--ok)">3</p><p style="font-size:12px;color:var(--sl)">정상</p></div><div style="width:1px;background:var(--hls)"></div><div style="text-align:center"><p style="font-size:20px;font-weight:700;color:var(--att)">1</p><p style="font-size:12px;color:var(--sl)">주의</p></div></div></div><div style="height:1px;background:var(--hls);margin-bottom:4px"></div><p class="settings-section-title">계정 설정</p><div><div class="settings-row" onclick="go('settings-basic')"><div class="settings-icon" style="background:var(--ps)">👤</div><div class="settings-label"><div class="settings-name">기본 정보 수정</div><div class="settings-desc">나이, 성별 변경</div></div><div class="settings-value">22세 · 남성</div><div class="settings-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div><div class="settings-row" onclick="go('settings-notify')"><div class="settings-icon" style="background:rgba(245,158,11,.12)">🔔</div><div class="settings-label"><div class="settings-name">알림 설정</div><div class="settings-desc">분析 완료, 건강 리포트</div></div><div class="settings-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div></div><p class="settings-section-title">서비스 정보</p><div><div class="settings-row" onclick="go('privacy-policy')"><div class="settings-icon" style="background:rgba(16,185,129,.12)">🔒</div><div class="settings-label"><div class="settings-name">개인정보 처리방침</div></div><div class="settings-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div><div class="settings-row" onclick="go('terms')"><div class="settings-icon" style="background:var(--sf)">📄</div><div class="settings-label"><div class="settings-name">이용약관</div></div><div class="settings-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div><div class="settings-row" onclick="go('app-info')"><div class="settings-icon" style="background:var(--ps)">ℹ️</div><div class="settings-label"><div class="settings-name">앱 정보</div><div class="settings-desc">버전, 개발팀</div></div><div class="settings-value">v3.0.0</div><div class="settings-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></div></div></div></div><nav class="tabs"><button class="tab" onclick="goTab('home')" style="position:relative"><span class="ti"><div class="scr" id="home"><div class="s-top"></div><div class="abar" style="border-bottom:none;padding:0 16px"><div style="display:flex;align-items:center"><svg style="height:22px;width:auto" viewBox="0 0 969 178" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M136.4 13.9543H174.289L37.8889 173.088H0L136.4 13.9543Z" fill="#000000"/>
+<path d="M60.6222 104.888H143.978V135.199H60.6222V104.888Z" fill="#000000"/>
+<path d="M195.91 13.667C212.708 13.667 227.388 16.9963 239.948 23.655C252.509 30.3137 262.194 39.6963 269.004 51.803C275.966 63.7583 279.446 77.6053 279.446 93.344C279.446 108.931 275.966 122.778 269.004 134.885C262.194 146.992 252.433 156.374 239.721 163.033C227.161 169.692 212.557 173.021 195.91 173.021H136.209V13.667H195.91ZM193.413 139.425C208.093 139.425 219.518 135.415 227.69 127.394C235.862 119.373 239.948 108.023 239.948 93.344C239.948 78.6647 235.862 67.239 227.69 59.067C219.518 50.895 208.093 46.809 193.413 46.809H175.026V139.425H193.413Z" fill="#2671EA"/>
+<path d="M136.4 13.9543H174.289L174.289 173.088H136.4L136.4 13.9543Z" fill="#000000"/>
+<path d="M434.567 149.617H376.665L367.383 177.021H327.824L383.958 21.879H427.716L483.85 177.021H443.849L434.567 149.617ZM424.843 120.445L405.616 63.648L386.61 120.445H424.843Z" fill="#000000"/>
+<path d="M519.94 40.885C513.31 40.885 507.859 38.9697 503.586 35.139C499.461 31.161 497.398 26.299 497.398 20.553C497.398 14.6597 499.461 9.79767 503.586 5.967C507.859 1.989 513.31 0 519.94 0C526.423 0 531.727 1.989 535.852 5.967C540.125 9.79767 542.261 14.6597 542.261 20.553C542.261 26.299 540.125 31.161 535.852 35.139C531.727 38.9697 526.423 40.885 519.94 40.885ZM538.725 53.703V177.021H500.934V53.703H538.725Z" fill="#000000"/>
+<path d="M624.235 21.879C640.589 21.879 654.88 25.1203 667.109 31.603C679.337 38.0857 688.767 47.2203 695.397 59.007C702.174 70.6463 705.563 84.1273 705.563 99.45C705.563 114.625 702.174 128.106 695.397 139.893C688.767 151.68 679.264 160.814 666.888 167.297C654.659 173.78 640.441 177.021 624.235 177.021H566.112V21.879H624.235ZM621.804 144.313C636.095 144.313 647.219 140.409 655.175 132.6C663.131 124.791 667.109 113.741 667.109 99.45C667.109 85.1587 663.131 74.035 655.175 66.079C647.219 58.123 636.095 54.145 621.804 54.145H603.903V144.313H621.804Z" fill="#2671EA"/>
+<path d="M764.473 52.156V83.538H815.082V112.71H764.473V146.744H821.712V177.021H726.682V21.879H821.712V52.156H764.473Z" fill="#2671EA"/>
+<path d="M925.364 177.021L893.098 118.456H884.037V177.021H846.246V21.879H909.673C921.902 21.879 932.289 24.0153 940.834 28.288C949.527 32.5607 956.01 38.454 960.282 45.968C964.555 53.3347 966.691 61.5853 966.691 70.72C966.691 81.0333 963.745 90.2417 957.851 98.345C952.105 106.448 943.56 112.194 932.215 115.583L968.017 177.021H925.364ZM884.037 91.715H907.463C914.388 91.715 919.545 90.0207 922.933 86.632C926.469 83.2433 928.237 78.455 928.237 72.267C928.237 66.3737 926.469 61.7327 922.933 58.344C919.545 54.9553 914.388 53.261 907.463 53.261H884.037V91.715Z" fill="#2671EA"/>
+</svg>
+</div><div style="flex:1"></div><button class="ibtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></button></div><div class="scroll px16 pb24"><div style="padding:16px 0 20px"><p style="font-size:14px;color:var(--sl);margin-bottom:4px">안녕하세요 👋</p><h2 style="font-size:20px;font-weight:600;color:var(--id);line-height:1.3;word-break:keep-all">오늘의 피부 상태는<br>어떠신가요?</h2></div><div class="hero" onclick="go('upload')"><div class="hero-inner"><span class="badge bdg-p" style="margin-bottom:12px">AI 피부 분析</span><h3 style="font-size:22px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:8px;word-break:keep-all">피부 상태를 지금<br>바로 확인해보세요</h3><p style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:20px">사진 한 장으로 AI 스크리닝 시작</p><div style="display:inline-flex;align-items:center;gap:8px;background:#2671EA;border-radius:9999px;padding:11px 20px"><span style="font-size:14px;font-weight:700;color:#fff">AI 진단 시작</span><span style="color:#fff;font-size:16px">→</span></div></div></div><div class="stat-row" style="margin-bottom:4px"><div class="stat-card"><div class="stat-val">4</div><div class="stat-lbl">총 진단 횟수</div></div><div class="stat-card"><div class="stat-val">91%</div><div class="stat-lbl">평균 신뢰도</div></div><div class="stat-card"><div class="stat-val">8초</div><div class="stat-lbl">평균 分析 시간</div></div></div><p class="sh">최근 진단 기록</p><div class="hi-item"><div class="hi-thumb">🔴</div><div class="hi-info"><div class="hi-top"><span class="hi-name">여드름 (Acne vulgaris)</span><span class="badge bdg-ok">저위험</span></div><div class="hi-date">2026.06.24 · 신뢰도 76%</div></div></div><div class="hi-item"><div class="hi-thumb">🟡</div><div class="hi-info"><div class="hi-top"><span class="hi-name">접촉성 피부염</span><span class="badge bdg-att">주의 필요</span></div><div class="hi-date">2026.06.20 · 신뢰도 62%</div></div></div><p class="sh">오늘의 피부 팁</p><div class="card-soft" style="margin-bottom:20px"><p style="font-size:14px;font-weight:700;color:var(--id);margin-bottom:6px">☀️ 여름철 자외선 주의</p><p style="font-size:13px;color:var(--sl);line-height:1.6;word-break:keep-all">자외선 차단제를 매일 사용하세요. SPF 30 이상 제품을 2~3시간마다 덧바르는 것이 권장됩니다.</p></div></div><nav class="tabs"><button class="tab on" onclick="goTab('home')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span><span>홈</span></button><button class="tab" onclick="goTab('upload')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg></span><span>진단</span></button><button class="tab" onclick="goTab('history')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span><span>기록</span></button><button class="tab" onclick="goTab('profile')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg></span><span>프로필</span><span class="tab-badge">1</span></button></nav><div class="s-bot"></div></div></span><span>홈</span></button><button class="tab" onclick="goTab('upload')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg></span><span>진단</span></button><button class="tab" onclick="goTab('history')" style="position:relative"><span class="ti"><div class="scr" id="history"><div class="s-top"></div><div class="abar"><div style="width:44px"></div><span class="abar-title">진단 기록</span><div style="width:44px"></div></div><div id="ptr-ind" class="ptr-indicator"><div class="spinner" style="width:20px;height:20px;border-width:2px"></div><span>업데이트 중...</span></div><div style="padding:10px 16px;display:flex;gap:8px;overflow-x:auto;flex-shrink:0;scrollbar-width:none"><button class="btn-chip on">전체</button><button class="btn-chip">여드름</button><button class="btn-chip">습진</button><button class="btn-chip">피부염</button><button class="btn-chip">기타</button></div><div class="scroll px16 pb24" id="history-scroll" ontouchstart="ptrStart(event)" ontouchend="ptrEnd(event)"><p class="sh">2026년 6월</p><div class="hi-item" onclick="go('result')"><div class="hi-thumb">🔴</div><div class="hi-info"><div class="hi-top"><span class="hi-name">여드름 (Acne vulgaris)</span><span class="badge bdg-ok">저위험</span></div><div class="hi-date">2026.06.24 · 신뢰도 76% · 이마</div></div></div><div class="hi-item" onclick="go('result-danger')"><div class="hi-thumb">🟡</div><div class="hi-info"><div class="hi-top"><span class="hi-name">접촉성 피부염</span><span class="badge bdg-att">주의 필요</span></div><div class="hi-date">2026.06.20 · 신뢰도 62% · 팔</div></div></div><div class="hi-item"><div class="hi-thumb">🟢</div><div class="hi-info"><div class="hi-top"><span class="hi-name">모낭염</span><span class="badge bdg-ok">저위험</span></div><div class="hi-date">2026.06.15 · 신뢰도 83% · 목</div></div></div><p class="sh">2026년 5월</p><div class="hi-item"><div class="hi-thumb">🔵</div><div class="hi-info"><div class="hi-top"><span class="hi-name">지루성 피부염</span><span class="badge bdg-n">이전 기록</span></div><div class="hi-date">2026.05.30 · 신뢰도 71% · 두피</div></div></div></div><nav class="tabs"><button class="tab" onclick="goTab('home')" style="position:relative"><span class="ti"><div class="scr" id="home"><div class="s-top"></div><div class="abar" style="border-bottom:none;padding:0 16px"><div style="display:flex;align-items:center"><svg style="height:22px;width:auto" viewBox="0 0 969 178" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M136.4 13.9543H174.289L37.8889 173.088H0L136.4 13.9543Z" fill="#000000"/>
+<path d="M60.6222 104.888H143.978V135.199H60.6222V104.888Z" fill="#000000"/>
+<path d="M195.91 13.667C212.708 13.667 227.388 16.9963 239.948 23.655C252.509 30.3137 262.194 39.6963 269.004 51.803C275.966 63.7583 279.446 77.6053 279.446 93.344C279.446 108.931 275.966 122.778 269.004 134.885C262.194 146.992 252.433 156.374 239.721 163.033C227.161 169.692 212.557 173.021 195.91 173.021H136.209V13.667H195.91ZM193.413 139.425C208.093 139.425 219.518 135.415 227.69 127.394C235.862 119.373 239.948 108.023 239.948 93.344C239.948 78.6647 235.862 67.239 227.69 59.067C219.518 50.895 208.093 46.809 193.413 46.809H175.026V139.425H193.413Z" fill="#2671EA"/>
+<path d="M136.4 13.9543H174.289L174.289 173.088H136.4L136.4 13.9543Z" fill="#000000"/>
+<path d="M434.567 149.617H376.665L367.383 177.021H327.824L383.958 21.879H427.716L483.85 177.021H443.849L434.567 149.617ZM424.843 120.445L405.616 63.648L386.61 120.445H424.843Z" fill="#000000"/>
+<path d="M519.94 40.885C513.31 40.885 507.859 38.9697 503.586 35.139C499.461 31.161 497.398 26.299 497.398 20.553C497.398 14.6597 499.461 9.79767 503.586 5.967C507.859 1.989 513.31 0 519.94 0C526.423 0 531.727 1.989 535.852 5.967C540.125 9.79767 542.261 14.6597 542.261 20.553C542.261 26.299 540.125 31.161 535.852 35.139C531.727 38.9697 526.423 40.885 519.94 40.885ZM538.725 53.703V177.021H500.934V53.703H538.725Z" fill="#000000"/>
+<path d="M624.235 21.879C640.589 21.879 654.88 25.1203 667.109 31.603C679.337 38.0857 688.767 47.2203 695.397 59.007C702.174 70.6463 705.563 84.1273 705.563 99.45C705.563 114.625 702.174 128.106 695.397 139.893C688.767 151.68 679.264 160.814 666.888 167.297C654.659 173.78 640.441 177.021 624.235 177.021H566.112V21.879H624.235ZM621.804 144.313C636.095 144.313 647.219 140.409 655.175 132.6C663.131 124.791 667.109 113.741 667.109 99.45C667.109 85.1587 663.131 74.035 655.175 66.079C647.219 58.123 636.095 54.145 621.804 54.145H603.903V144.313H621.804Z" fill="#2671EA"/>
+<path d="M764.473 52.156V83.538H815.082V112.71H764.473V146.744H821.712V177.021H726.682V21.879H821.712V52.156H764.473Z" fill="#2671EA"/>
+<path d="M925.364 177.021L893.098 118.456H884.037V177.021H846.246V21.879H909.673C921.902 21.879 932.289 24.0153 940.834 28.288C949.527 32.5607 956.01 38.454 960.282 45.968C964.555 53.3347 966.691 61.5853 966.691 70.72C966.691 81.0333 963.745 90.2417 957.851 98.345C952.105 106.448 943.56 112.194 932.215 115.583L968.017 177.021H925.364ZM884.037 91.715H907.463C914.388 91.715 919.545 90.0207 922.933 86.632C926.469 83.2433 928.237 78.455 928.237 72.267C928.237 66.3737 926.469 61.7327 922.933 58.344C919.545 54.9553 914.388 53.261 907.463 53.261H884.037V91.715Z" fill="#2671EA"/>
+</svg>
+</div><div style="flex:1"></div><button class="ibtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></button></div><div class="scroll px16 pb24"><div style="padding:16px 0 20px"><p style="font-size:14px;color:var(--sl);margin-bottom:4px">안녕하세요 👋</p><h2 style="font-size:20px;font-weight:600;color:var(--id);line-height:1.3;word-break:keep-all">오늘의 피부 상태는<br>어떠신가요?</h2></div><div class="hero" onclick="go('upload')"><div class="hero-inner"><span class="badge bdg-p" style="margin-bottom:12px">AI 피부 분析</span><h3 style="font-size:22px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:8px;word-break:keep-all">피부 상태를 지금<br>바로 확인해보세요</h3><p style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:20px">사진 한 장으로 AI 스크리닝 시작</p><div style="display:inline-flex;align-items:center;gap:8px;background:#2671EA;border-radius:9999px;padding:11px 20px"><span style="font-size:14px;font-weight:700;color:#fff">AI 진단 시작</span><span style="color:#fff;font-size:16px">→</span></div></div></div><div class="stat-row" style="margin-bottom:4px"><div class="stat-card"><div class="stat-val">4</div><div class="stat-lbl">총 진단 횟수</div></div><div class="stat-card"><div class="stat-val">91%</div><div class="stat-lbl">평균 신뢰도</div></div><div class="stat-card"><div class="stat-val">8초</div><div class="stat-lbl">평균 分析 시간</div></div></div><p class="sh">최근 진단 기록</p><div class="hi-item"><div class="hi-thumb">🔴</div><div class="hi-info"><div class="hi-top"><span class="hi-name">여드름 (Acne vulgaris)</span><span class="badge bdg-ok">저위험</span></div><div class="hi-date">2026.06.24 · 신뢰도 76%</div></div></div><div class="hi-item"><div class="hi-thumb">🟡</div><div class="hi-info"><div class="hi-top"><span class="hi-name">접촉성 피부염</span><span class="badge bdg-att">주의 필요</span></div><div class="hi-date">2026.06.20 · 신뢰도 62%</div></div></div><p class="sh">오늘의 피부 팁</p><div class="card-soft" style="margin-bottom:20px"><p style="font-size:14px;font-weight:700;color:var(--id);margin-bottom:6px">☀️ 여름철 자외선 주의</p><p style="font-size:13px;color:var(--sl);line-height:1.6;word-break:keep-all">자외선 차단제를 매일 사용하세요. SPF 30 이상 제품을 2~3시간마다 덧바르는 것이 권장됩니다.</p></div></div><nav class="tabs"><button class="tab on" onclick="goTab('home')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span><span>홈</span></button><button class="tab" onclick="goTab('upload')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg></span><span>진단</span></button><button class="tab" onclick="goTab('history')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span><span>기록</span></button><button class="tab" onclick="goTab('profile')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg></span><span>프로필</span><span class="tab-badge">1</span></button></nav><div class="s-bot"></div></div></span><span>홈</span></button><button class="tab" onclick="goTab('upload')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg></span><span>진단</span></button><button class="tab on" onclick="goTab('history')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span><span>기록</span></button><button class="tab" onclick="goTab('profile')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg></span><span>프로필</span><span class="tab-badge">1</span></button></nav><div class="s-bot"></div></div></span><span>기록</span></button><button class="tab on" onclick="goTab('profile')" style="position:relative"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg></span><span>프로필</span><span class="tab-badge">1</span></button></nav><div class="s-bot"></div></div><div class="scr" id="settings-basic"><div class="s-top"></div><div class="abar"><button class="ibtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button><span class="abar-title">기본 정보 수정</span><div style="width:44px"></div></div><div class="scroll px16 pb24" style="padding-top:20px"><div class="fg"><label class="fl">이름</label><input class="input" type="text" value="김강민" placeholder="이름을 입력해 주세요"></div><div class="fg"><label class="fl">나이 <span style="color:var(--crit)">*</span></label><input class="input" type="number" value="22" placeholder="만 나이를 입력해 주세요"><p class="fh">만 나이 기준으로 입력해 주세요</p></div><div class="fg"><label class="fl">성별 <span style="color:var(--crit)">*</span></label><div class="gender-row"><button class="gender-btn on" onclick="selGender(this)">남성</button><button class="gender-btn" onclick="selGender(this)">여성</button><button class="gender-btn" onclick="selGender(this)">응답 안함</button></div></div><div class="fg"><label class="fl">소속 기관 (선택)</label><input class="input" type="text" value="UNIST" placeholder="소속 기관을 입력해 주세요"></div><div style="margin-top:24px"><button class="btn btn-p" onclick="showToast('정보가 저장되었습니다 ✅');back()">저장하기</button></div></div><div class="s-bot"></div></div><div class="scr" id="settings-notify"><div class="s-top"></div><div class="abar"><button class="ibtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button><span class="abar-title">알림 설정</span><div style="width:44px"></div></div><div class="scroll px16 pb24" style="padding-top:20px"><p style="font-size:13px;color:var(--sl);margin-bottom:20px;line-height:1.5;word-break:keep-all">원하는 알림 유형을 선택하세요. 중요 의료 알림은 항상 수신됩니다.</p><div class="notif-row"><div class="notif-label"><div class="notif-name">분析 완료 알림</div><div class="notif-desc">AI 분析이 완료되면 즉시 알림</div></div><label class="tgl-sw"><input type="checkbox" checked><span class="tgl-track"></span></label></div><div class="notif-row"><div class="notif-label"><div class="notif-name">고위험 경보</div><div class="notif-desc">고위험 판정 시 즉시 알림 (권장)</div></div><label class="tgl-sw"><input type="checkbox" checked><span class="tgl-track"></span></label></div><div class="notif-row"><div class="notif-label"><div class="notif-name">주간 피부 리포트</div><div class="notif-desc">매주 월요일 피부 상태 요약 전송</div></div><label class="tgl-sw"><input type="checkbox" checked><span class="tgl-track"></span></label></div><div class="notif-row"><div class="notif-label"><div class="notif-name">피부 관리 팁</div><div class="notif-desc">맞춤형 피부 케어 정보</div></div><label class="tgl-sw"><input type="checkbox"><span class="tgl-track"></span></label></div><div class="notif-row"><div class="notif-label"><div class="notif-name">앱 업데이트 알림</div><div class="notif-desc">새 기능 및 개선 사항 안내</div></div><label class="tgl-sw"><input type="checkbox"><span class="tgl-track"></span></label></div><div style="margin-top:24px"><button class="btn btn-g" onclick="showToast('모든 알림이 저장되었습니다 ✅');back()">저장하기</button></div></div><div id="toast"></div><div class="s-bot"></div></div><div class="scr" id="privacy-policy"><div class="s-top"></div><div class="abar"><button class="ibtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button><span class="abar-title">개인정보 처리방침</span><div style="width:44px"></div></div><div class="scroll pb24"><div class="policy-body"><p class="policy-h2">제1조 (개인정보의 수집 항목 및 목적)</p><p style="font-size:13px;color:var(--ink);line-height:1.8;word-break:keep-all">AiDER(이하 "서비스")는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 「개인정보 보호법」 제18조에 따라 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.<br><br>① 필수 수집 항목: 연령대, 성별, 피부 사진 데이터, 증상·생활습관 설문 응답<br>② 수집 목적: AI 기반 피부 질환 스크리닝 서비스 제공, 맞춤형 분析 결과 제공</p><p class="policy-h2">제2조 (개인정보의 처리 및 보유 기간)</p><p style="font-size:13px;color:var(--ink);line-height:1.8;word-break:keep-all">서비스는 법령에 따른 개인정보 보유·이용 기간 또는 정보주체로부터 개인정보를 수집 시에 동의받은 개인정보 보유·이용기간 내에서 개인정보를 처리·보유합니다.<br><br>각각의 개인정보 처리 및 보유 기간은 다음과 같습니다:<br>① 피부 사진: AI 分析 즉시 삭제 (로컬 처리 후 서버 미저장)<br>② 분析 결과: 서비스 탈퇴 시까지 (최대 1년)<br>③ 설문 응답: 수집일로부터 6개월</p><p class="policy-h2">제3조 (개인정보의 제3자 제공)</p><p style="font-size:13px;color:var(--ink);line-height:1.8;word-break:keep-all">서비스는 원칙적으로 이용자의 개인정보를 제3자에게 제공하지 않습니다. 다만, 이용자의 동의가 있거나 법령의 규정에 의거한 경우에는 그러하지 아니합니다.</p><p class="policy-h2">제4조 (의료법 관련 안내)</p><p style="font-size:13px;color:var(--ink);line-height:1.8;word-break:keep-all">AiDER는 의학적 진단 행위를 수행하지 않으며, 제공되는 분析 결과는 참고용 정보에 한합니다. 정확한 의학적 진단과 치료를 위해서는 반드시 의료기관의 전문의에게 상담하시기 바랍니다.</p><p class="policy-h2">제5조 (정보주체의 권리·의무 및 그 행사 방법)</p><p style="font-size:13px;color:var(--ink);line-height:1.8;word-break:keep-all">이용자는 개인정보주체로서 언제든지 개인정보 열람, 정정, 삭제, 처리정지 요구 등의 권리를 행사할 수 있습니다.</p><p style="font-size:12px;color:var(--sl);margin-top:20px">시행일: 2026년 6월 1일<br>제정: AiDER Team (UNIST BME × ECHE)</p></div></div><div class="s-bot"></div></div><div class="scr" id="terms"><div class="s-top"></div><div class="abar"><button class="ibtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button><span class="abar-title">이용약관</span><div style="width:44px"></div></div><div class="scroll pb24"><div class="policy-body"><p class="policy-h2">제1조 (목적)</p><p style="font-size:13px;color:var(--ink);line-height:1.8;word-break:keep-all">이 약관은 AiDER(이하 "서비스")가 제공하는 AI 기반 피부 질환 스크리닝 서비스의 이용에 관한 조건 및 절차, 이용자와 서비스의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.</p><p class="policy-h2">제2조 (면책 조항)</p><p style="font-size:13px;color:var(--ink);line-height:1.8;word-break:keep-all">서비스는 의학적 진단 서비스가 아닙니다. AiDER가 제공하는 결과는 AI 보조 스크리닝 참고용 정보이며, 의료 전문가의 진단을 대체할 수 없습니다. 서비스 이용으로 인해 발생하는 의료적 결과에 대해 서비스는 책임을 지지 않습니다.</p><p class="policy-h2">제3조 (서비스 이용 조건)</p><p style="font-size:13px;color:var(--ink);line-height:1.8;word-break:keep-all">① 만 14세 이상인 자는 서비스를 이용할 수 있습니다.<br>② 이용자는 서비스 이용 시 관련 법령을 준수해야 합니다.<br>③ 타인의 사진을 무단으로 업로드하는 행위는 금지됩니다.</p><p style="font-size:12px;color:var(--sl);margin-top:20px">시행일: 2026년 6월 1일<br>제정: AiDER Team (UNIST BME × ECHE)</p></div></div><div class="s-bot"></div></div><div class="scr" id="app-info"><div class="s-top"></div><div class="abar"><button class="ibtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg></button><span class="abar-title">앱 정보</span><div style="width:44px"></div></div><div class="scroll pb24"><div class="appinfo-center"><div style="display:flex;align-items:center"><svg style="height:36px;width:auto" viewBox="0 0 969 178" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M136.4 13.9543H174.289L37.8889 173.088H0L136.4 13.9543Z" fill="#000000"/>
+<path d="M60.6222 104.888H143.978V135.199H60.6222V104.888Z" fill="#000000"/>
+<path d="M195.91 13.667C212.708 13.667 227.388 16.9963 239.948 23.655C252.509 30.3137 262.194 39.6963 269.004 51.803C275.966 63.7583 279.446 77.6053 279.446 93.344C279.446 108.931 275.966 122.778 269.004 134.885C262.194 146.992 252.433 156.374 239.721 163.033C227.161 169.692 212.557 173.021 195.91 173.021H136.209V13.667H195.91ZM193.413 139.425C208.093 139.425 219.518 135.415 227.69 127.394C235.862 119.373 239.948 108.023 239.948 93.344C239.948 78.6647 235.862 67.239 227.69 59.067C219.518 50.895 208.093 46.809 193.413 46.809H175.026V139.425H193.413Z" fill="#2671EA"/>
+<path d="M136.4 13.9543H174.289L174.289 173.088H136.4L136.4 13.9543Z" fill="#000000"/>
+<path d="M434.567 149.617H376.665L367.383 177.021H327.824L383.958 21.879H427.716L483.85 177.021H443.849L434.567 149.617ZM424.843 120.445L405.616 63.648L386.61 120.445H424.843Z" fill="#000000"/>
+<path d="M519.94 40.885C513.31 40.885 507.859 38.9697 503.586 35.139C499.461 31.161 497.398 26.299 497.398 20.553C497.398 14.6597 499.461 9.79767 503.586 5.967C507.859 1.989 513.31 0 519.94 0C526.423 0 531.727 1.989 535.852 5.967C540.125 9.79767 542.261 14.6597 542.261 20.553C542.261 26.299 540.125 31.161 535.852 35.139C531.727 38.9697 526.423 40.885 519.94 40.885ZM538.725 53.703V177.021H500.934V53.703H538.725Z" fill="#000000"/>
+<path d="M624.235 21.879C640.589 21.879 654.88 25.1203 667.109 31.603C679.337 38.0857 688.767 47.2203 695.397 59.007C702.174 70.6463 705.563 84.1273 705.563 99.45C705.563 114.625 702.174 128.106 695.397 139.893C688.767 151.68 679.264 160.814 666.888 167.297C654.659 173.78 640.441 177.021 624.235 177.021H566.112V21.879H624.235ZM621.804 144.313C636.095 144.313 647.219 140.409 655.175 132.6C663.131 124.791 667.109 113.741 667.109 99.45C667.109 85.1587 663.131 74.035 655.175 66.079C647.219 58.123 636.095 54.145 621.804 54.145H603.903V144.313H621.804Z" fill="#2671EA"/>
+<path d="M764.473 52.156V83.538H815.082V112.71H764.473V146.744H821.712V177.021H726.682V21.879H821.712V52.156H764.473Z" fill="#2671EA"/>
+<path d="M925.364 177.021L893.098 118.456H884.037V177.021H846.246V21.879H909.673C921.902 21.879 932.289 24.0153 940.834 28.288C949.527 32.5607 956.01 38.454 960.282 45.968C964.555 53.3347 966.691 61.5853 966.691 70.72C966.691 81.0333 963.745 90.2417 957.851 98.345C952.105 106.448 943.56 112.194 932.215 115.583L968.017 177.021H925.364ZM884.037 91.715H907.463C914.388 91.715 919.545 90.0207 922.933 86.632C926.469 83.2433 928.237 78.455 928.237 72.267C928.237 66.3737 926.469 61.7327 922.933 58.344C919.545 54.9553 914.388 53.261 907.463 53.261H884.037V91.715Z" fill="#2671EA"/>
+</svg>
+</div><div class="appinfo-ver">v3.0.0 (FIN:NECT 예선 데모)</div><p style="font-size:13px;color:var(--sl);margin-top:8px">AI 피부 질환 스크리닝</p></div><div style="height:1px;background:var(--hls);margin:0 16px"></div><div class="px16 pb24"><p class="sh">개발팀</p><div class="card-soft" style="margin-bottom:16px"><p style="font-size:14px;font-weight:700;color:var(--id);margin-bottom:12px">AiDER Team</p><p style="font-size:13px;color:var(--sl);margin-bottom:4px">UNIST BME × ECHE</p><div style="display:flex;flex-direction:column;gap:8px;margin-top:12px"><div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--ink)">조혜리</span><span style="font-size:12px;color:var(--sl)">CEO</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--ink)">김강민</span><span style="font-size:12px;color:var(--sl)">COO / PM</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--ink)">이강인</span><span style="font-size:12px;color:var(--sl)">CTO</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--ink)">김채윤</span><span style="font-size:12px;color:var(--sl)">CSO</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--ink)">심이은</span><span style="font-size:12px;color:var(--sl)">CMO</span></div></div></div><p class="sh">기술 스택</p><div class="card-soft" style="margin-bottom:16px"><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--ink)">병변 검출</span><span style="font-size:13px;font-weight:600;color:var(--p)">YOLO v8</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--ink)">질환 분류</span><span style="font-size:13px;font-weight:600;color:var(--p)">EfficientNet-B0</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--ink)">멀티모달 분析</span><span style="font-size:13px;font-weight:600;color:var(--p)">MLP Fusion</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:13px;color:var(--ink)">OTC 추천</span><span style="font-size:13px;font-weight:600;color:var(--p)">Rule-based</span></div></div></div><p class="sh">수상 및 참여</p><div class="card-soft" style="margin-bottom:16px"><p style="font-size:13px;color:var(--sl);line-height:1.8;word-break:keep-all">🏆 2026 FIN:NECT 챌린지 AI Track 참가<br>🎓 UNIST BME × ECHE 협력 프로젝트<br>🌟 대통령과학장학금 수혜자 참여 팀</p></div><p style="font-size:12px;color:var(--st);text-align:center;line-height:1.6;word-break:keep-all">※ 본 앱은 의료기기가 아닙니다.<br>AiDER Team © 2026. All rights reserved.</p></div></div><div class="s-bot"></div></div><div id="swipe-hint"></div>
+</div>
+</div>
+<script>
+
+const DUR = 220;
+let _hist = ['splash'];
+let _lock = false;
+
+function _doTrans(outId, inId, inFrom, outTo) {
+  if (_lock) return false;
+  const out = document.getElementById(outId);
+  const inn = document.getElementById(inId);
+  if (!out || !inn || out === inn) return false;
+  _lock = true;
+  inn.style.transition = 'none';
+  inn.style.transform = inFrom;
+  inn.offsetHeight;
+  inn.style.transition = `transform ${DUR}ms cubic-bezier(0.4,0,0.2,1)`;
+  out.style.transition = `transform ${DUR}ms cubic-bezier(0.4,0,0.2,1)`;
+  inn.style.transform = 'translateX(0)';
+  out.style.transform = outTo;
+  setTimeout(() => {
+    out.classList.remove('on'); out.style.cssText = '';
+    inn.classList.add('on'); inn.style.cssText = '';
+    _lock = false;
+    onScreenEnter(inId);
+  }, DUR + 10);
+  return true;
+}
+
+function go(nextId) {
+  const cur = _hist[_hist.length - 1];
+  if (cur === nextId) return;
+  if (_doTrans(cur, nextId, 'translateX(100%)', 'translateX(-28%)')) _hist.push(nextId);
+}
+function back() {
+  if (_hist.length <= 1 || _lock) return;
+  const cur = _hist.pop();
+  const prev = _hist[_hist.length - 1];
+  _doTrans(cur, prev, 'translateX(-28%)', 'translateX(100%)');
+}
+function goTab(id) {
+  if (_lock) return;
+  document.querySelector('.scr.on')?.classList.remove('on');
+  document.getElementById(id)?.classList.add('on');
+  _hist = [id];
+  onScreenEnter(id);
+}
+
+// ── Screen entry hooks ──
+function onScreenEnter(id) {
+  if (id === 'result') animateResult();
+  if (id === 'yolo-vis') showYOLO();
+}
+
+// ── Result animations ──
+function animateResult() {
+  // Delay so screen is visible first
+  setTimeout(() => {
+    // Probability bars
+    const fills = document.querySelectorAll('#result .pb-fill');
+    const widths = ['76%','11%','5%'];
+    fills.forEach((f,i) => { f.style.width = '0'; setTimeout(() => { f.style.width = widths[i]||'0'; }, 100 + i*150); });
+    // Confidence number count-up
+    const numEl = document.getElementById('confidence-num');
+    if (numEl) {
+      let n = 0;
+      const target = 76;
+      const t = setInterval(() => {
+        n = Math.min(n + 3, target);
+        numEl.textContent = n + '%';
+        if (n >= target) clearInterval(t);
+      }, 40);
+    }
+    // Bounding boxes appear
+    const bbs = document.querySelectorAll('#result .diag-bb');
+    bbs.forEach((b,i) => { b.style.transform='scale(0.8)'; setTimeout(() => { b.classList.add('show'); }, 400 + i*250); });
+  }, 150);
+}
+
+// ── YOLO visualization ──
+function showYOLO() {
+  const bbs = document.querySelectorAll('.yolo-bb');
+  bbs.forEach(b => { b.style.opacity='0'; b.classList.remove('visible'); });
+  setTimeout(() => { bbs[0]?.classList.add('visible'); }, 600);
+  setTimeout(() => { bbs[1]?.classList.add('visible'); }, 1100);
+}
+
+// ── Onboarding ──
+let _obSlide = 0;
+function obNext() {
+  const slides = document.querySelectorAll('.ob-slide');
+  const dots = document.querySelectorAll('#ob-dots .ob-dot');
+  const btn = document.getElementById('ob-btn');
+  slides[_obSlide].style.display = 'none';
+  if (_obSlide < slides.length - 1) {
+    _obSlide++;
+    slides[_obSlide].style.display = 'flex';
+    dots.forEach((d,i) => d.classList.toggle('on', i === _obSlide));
+    if (_obSlide === slides.length-1) btn.textContent = '시작하기';
+  } else { go('basic-info'); }
+}
+
+// ── Form helpers ──
+function updateSlider(el, id) { document.getElementById(id).textContent = el.value; }
+function togglePart(el) { el.classList.toggle('on'); }
+function selGender(el) {
+  el.closest('.gender-row').querySelectorAll('.gender-btn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+}
+
+// ── Progress animation ──
+function animProg(id, dur, onDone) {
+  const el = document.getElementById(id);
+  if (!el) { onDone && setTimeout(onDone, 0); return; }
+  let w = 0;
+  const step = 100 / (dur / 60);
+  const t = setInterval(() => {
+    w = Math.min(w + step, 100);
+    el.style.width = w + '%';
+    if (w >= 100) { clearInterval(t); setTimeout(onDone || (()=>{}), 200); }
+  }, 60);
+}
+
+// ── Camera ──
+function openCamera() { go('camera'); }
+function onCamTap(e) {
+  const ring = document.getElementById('focus-ring');
+  if (!ring) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = e.clientX - rect.left - 35;
+  const y = e.clientY - rect.top - 35;
+  ring.style.left = x + 'px';
+  ring.style.top = y + 'px';
+  ring.classList.remove('active');
+  void ring.offsetWidth;
+  ring.classList.add('active');
+  setTimeout(() => ring.classList.remove('active'), 500);
+}
+function shootPhoto() {
+  const flash = document.createElement('div');
+  flash.style.cssText = 'position:absolute;inset:0;background:#fff;z-index:999;animation:flashOut .3s ease forwards;pointer-events:none';
+  document.getElementById('camera').appendChild(flash);
+  setTimeout(() => { flash.remove(); go('preview'); }, 280);
+}
+function usePhoto() { startQCheck(); }
+function startQCheck() {
+  go('q-loading');
+  animProg('qcheck-prog', 1500, () => { go('q-pass'); animProg('qpass-prog', 1200, () => go('q1')); });
+}
+
+// ── AI Loading ──
+let _aiStart = null;
+function startAI() {
+  go('ai-loading');
+  _aiStart = Date.now();
+  const steps = [['li0','lst0','lic0','lt0'],['li1','lst1','lic1','lt1'],['li2','lst2','lic2','lt2']];
+  function setStep(i, state) {
+    const [ic,lb,lic,lt] = steps[i];
+    const elapsed = ((Date.now() - _aiStart) / 1000).toFixed(1);
+    if (state === 'act') {
+      document.getElementById(ic).className = 'lstep-icon act';
+      document.getElementById(lb).className = 'lstep-st act';
+      document.getElementById(lb).textContent = '진행 중';
+      document.getElementById(lic).textContent = '⏳';
+    } else {
+      document.getElementById(ic).className = 'lstep-icon done';
+      document.getElementById(lb).className = 'lstep-st done';
+      document.getElementById(lb).textContent = '완료';
+      document.getElementById(lic).textContent = '✅';
+      const tEl = document.getElementById(lt);
+      if (tEl) { tEl.textContent = '+' + elapsed + 's 소요'; tEl.classList.add('show'); }
+    }
+  }
+  setStep(0,'act');
+  animProg('ai-prog', 5500, null);
+  setTimeout(() => { setStep(0,'done'); setStep(1,'act'); }, 1800);
+  setTimeout(() => { setStep(1,'done'); go('yolo-vis'); }, 3500);
+}
+function continueFromYOLO() {
+  const [ic,lb,lic,lt] = ['li2','lst2','lic2','lt2'];
+  document.getElementById(ic).className = 'lstep-icon act';
+  document.getElementById(lb).className = 'lstep-st act';
+  document.getElementById(lb).textContent = '진행 중';
+  document.getElementById(lic).textContent = '⏳';
+  go('ai-loading');
+  setTimeout(() => {
+    document.getElementById(ic).className = 'lstep-icon done';
+    document.getElementById(lb).className = 'lstep-st done';
+    document.getElementById(lb).textContent = '완료';
+    document.getElementById(lic).textContent = '✅';
+    const t = ((Date.now() - _aiStart) / 1000).toFixed(1);
+    const tEl = document.getElementById(lt);
+    if (tEl) { tEl.textContent = '+' + t + 's 소요'; tEl.classList.add('show'); }
+    document.getElementById('ai-prog').style.width = '100%';
+    setTimeout(() => go('result'), 600);
+  }, 1500);
+}
+
+// ── Result detail tabs ──
+function switchRTab(contentId, n) {
+  document.querySelectorAll('.rtab').forEach((t,i) => t.classList.toggle('on', i === n));
+  document.querySelectorAll('.rtab-content').forEach(c => c.classList.remove('on'));
+  document.getElementById(contentId).classList.add('on');
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Save sheet ──
+function openSaveSheet() { document.getElementById('save-sheet').classList.add('open'); }
+function closeSaveSheet() { document.getElementById('save-sheet').classList.remove('open'); }
+function saveAction(type) {
+  closeSaveSheet();
+  const msgs = { img:'이미지가 저장되었습니다 ✅', clip:'링크가 복사되었습니다 ✅', share:'공유 준비 완료 ✅' };
+  setTimeout(() => showToast(msgs[type] || '완료'), 250);
+}
+
+// ── Success overlay ──
+function showSuccess(msg) {
+  const ov = document.getElementById('success-overlay');
+  const txt = document.getElementById('success-msg');
+  if (!ov) return;
+  if (txt) txt.textContent = msg || '저장 완료!';
+  ov.classList.add('show');
+  setTimeout(() => ov.classList.remove('show'), 2000);
+}
+
+// ── Swipe to go back ──
+let _sx = 0, _sy = 0;
+const dev = document.getElementById('device');
+dev.addEventListener('touchstart', e => { _sx = e.touches[0].clientX; _sy = e.touches[0].clientY; }, { passive:true });
+dev.addEventListener('touchmove', e => {
+  const dx = e.touches[0].clientX - _sx;
+  const hint = document.getElementById('swipe-hint');
+  if (_sx < 40 && dx > 0 && hint) hint.style.opacity = Math.min(dx / 80, 0.7);
+}, { passive:true });
+dev.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - _sx;
+  const dy = Math.abs(e.changedTouches[0].clientY - _sy);
+  const hint = document.getElementById('swipe-hint');
+  if (hint) hint.style.opacity = '0';
+  if (_sx < 50 && dx > 80 && dy < 80 && _hist.length > 1) back();
+}, { passive:true });
+
+// ── Pull to refresh (history) ──
+let _ptrStart = 0;
+function ptrStart(e) { _ptrStart = e.touches?.[0]?.clientY || 0; }
+function ptrEnd(e) {
+  const dy = (e.changedTouches?.[0]?.clientY || 0) - _ptrStart;
+  const ind = document.getElementById('ptr-ind');
+  if (dy > 60 && document.getElementById('history-scroll')?.scrollTop === 0) {
+    if (ind) { ind.classList.add('show'); setTimeout(() => ind.classList.remove('show'), 1500); }
+    showToast('업데이트 완료 ✅');
+  }
+}
+
+// ── Chip filter ──
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('btn-chip') && !e.target.id) {
+    e.target.closest('div,nav')?.querySelectorAll('.btn-chip').forEach(c=>c.classList.remove('on'));
+    e.target.classList.add('on');
+  }
+});
+
+// ── Flash animation ──
+const fs = document.createElement('style');
+fs.textContent = '@keyframes flashOut{from{opacity:.85}to{opacity:0}}';
+document.head.appendChild(fs);
+
+// Splash
+setTimeout(() => go('onboard'), 2500);
+
+</script>
+</body>
+</html>
